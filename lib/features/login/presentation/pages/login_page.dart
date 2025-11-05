@@ -48,14 +48,12 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(
-                          height: 120, 
+                        Expanded(
                           child: Image.asset(
                             'assets/images/logo_bps.png',
                             fit: BoxFit.contain,
                           ),
                         ),
-                        const SizedBox(height: 16),
                         Text(
                           'Bidang Pengelola Sampah RW',
                           textAlign: TextAlign.center, 
