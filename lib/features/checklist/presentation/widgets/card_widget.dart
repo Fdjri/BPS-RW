@@ -116,7 +116,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
     );
   }
 
-  void _showSavePreviewDialog(BuildContext context, XFile pickedFile) {
+  void _showSavePreviewDialog(BuildContext context, XFile pickedFile, double fileSizeInKB) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -132,6 +132,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center, 
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12.0),
@@ -140,54 +141,84 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
                   fit: BoxFit.contain,
                 ),
               ),
+              const SizedBox(height: 8),
               Text(
-                pickedFile.name, 
-                style: TextStyle(fontFamily: 'InstrumentSans', fontSize: 12),
-                overflow: TextOverflow.ellipsis,
+                "${fileSizeInKB.toStringAsFixed(1)} KB",
+                style: TextStyle(
+                  fontFamily: 'InstrumentSans',
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: fileSizeInKB > 200 ? AppColors.red.normal : AppColors.green.dark,
+                ),
+                textAlign: TextAlign.center, 
               ),
             ],
           ),
           actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: AppColors.red.normal),
-                foregroundColor: AppColors.red.normal,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            Wrap(
+              alignment: WrapAlignment.center, 
+              spacing: 8.0, 
+              runSpacing: 8.0,
+              children: [
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.red.normal),
+                    foregroundColor: AppColors.red.normal,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'BATAL',
+                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
                 ),
-              ),
-              child: Text(
-                'BATAL',
-                style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.green.normal,
-                foregroundColor: AppColors.white.normal,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.blue.normal),
+                    foregroundColor: AppColors.blue.normal,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'GANTI',
+                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    _showImageSourceActionSheet(context);
+                  },
                 ),
-              ),
-              child: Text(
-                'SIMPAN',
-                style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                setState(() {
-                  _imageFile = pickedFile;
-                  _isFotoUploaded = true;
-                });
-                widget.onFotoUploadChanged(true);
-                _showConfirmationDialog(context);
-              },
-            ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.green.normal,
+                    foregroundColor: AppColors.white.normal,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'SIMPAN',
+                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                    setState(() {
+                      _imageFile = pickedFile;
+                      _isFotoUploaded = true;
+                    });
+                    widget.onFotoUploadChanged(true);
+                    _showConfirmationDialog(context);
+                  },
+                ),
+              ],
+            )
           ],
         );
       },
@@ -424,12 +455,15 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
     try {
       final XFile? pickedFile = await _picker.pickImage(
         source: source,
-        imageQuality: 80, // Kompresi gambar
-        maxWidth: 1000, // Resize gambar
+        imageQuality: 50, // atur quality image
+        maxWidth: 1000, 
       );
 
       if (pickedFile != null && mounted) {
-        _showSavePreviewDialog(context, pickedFile);
+        final int fileSizeInBytes = await pickedFile.length();
+        final double fileSizeInKB = fileSizeInBytes / 1024;
+        
+        _showSavePreviewDialog(context, pickedFile, fileSizeInKB);
       } else {
         print("User cancelled image picking.");
       }
@@ -675,4 +709,3 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
     super.dispose();
   }
 }
-
