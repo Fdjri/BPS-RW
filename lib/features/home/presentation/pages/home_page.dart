@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:lottie/lottie.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
+import '../blocs/home_cubit.dart'; 
+import '../../domain/entities/dashboard_data.dart'; 
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  static const String routeName = '/home';
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -12,46 +18,126 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedWasteTypeIndex = 0;
-  final List<Color> _lineColors = [
-    AppColors.red.normal,
-    AppColors.blue.normal,
-  ];
 
-  final List<FlSpot> _accumulationData = const [
-    FlSpot(0, 8000),
-    FlSpot(1, 9000),
-    FlSpot(2, 9000),
-    FlSpot(3, 9200),
-    FlSpot(4, 18000),
-    FlSpot(5, 19000),
-    FlSpot(6, 19000),
-    FlSpot(7, 19000),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final username = ModalRoute.of(context)?.settings.arguments as String?;
+      if (username != null && mounted) {
+        _showWelcomePopup(context, username);
+      }
+    });
+  }
 
-  final List<FlSpot> _checkPerMonthData = const [
-    FlSpot(0, 8000),
-    FlSpot(1, 6000),
-    FlSpot(2, 7000),
-    FlSpot(3, 5000),
-    FlSpot(4, 4000),
-    FlSpot(5, 3000),
-    FlSpot(6, 2500),
-    FlSpot(7, 2000),
-  ];
-
-  final List<String> _bottomTitles = const [
-    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep'
-  ];
-
+  void _showWelcomePopup(BuildContext context, String username) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, 
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: AppColors.white.normal,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Lottie.asset(
+                  'assets/lottie/handshake.json',
+                  width: 180,
+                  height: 180,
+                  fit: BoxFit.contain,
+                  onLoaded: (composition) {
+                    Future.delayed(composition.duration, () {
+                      if (Navigator.canPop(dialogContext)) {
+                        Navigator.of(dialogContext).pop();
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Selamat Datang!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    color: AppColors.black.normal,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  username, 
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 18,
+                    color: AppColors.blue.normal, 
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => HomeCubit()..fetchDashboardData(),
+      child: Scaffold(
+        body: BlocBuilder<HomeCubit, HomeState>(
+          builder: (context, state) {
+            if (state.status == HomeStatus.loading || 
+                state.status == HomeStatus.initial) {
+              return Center(
+                child: CircularProgressIndicator(
+                  color: AppColors.blue.normal,
+                ),
+              );
+            }
+
+            if (state.status == HomeStatus.failure) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(state.errorMessage ?? 'Error!'),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<HomeCubit>().fetchDashboardData();
+                      }, 
+                      child: const Text('Coba Lagi'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (state.status == HomeStatus.success && state.dashboardData != null) {
+              return _buildMainHomePage(state.dashboardData!);
+            }
+            return const Center(child: Text('State tidak dikenal'));
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMainHomePage(DashboardData data) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
-          
+          _buildHeader(data),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -65,27 +151,27 @@ class _HomePageState extends State<HomePage> {
                   physics: const NeverScrollableScrollPhysics(),
                   childAspectRatio: 1.0,
                   children: [
-                    _buildStatCard('Jumlah RT', '15'),
-                    _buildStatCard('Jumlah Rumah (unit)', '428'),
-                    _buildStatCard('Jumlah Jiwa (Orang)', '2383'),
+                    _buildStatCard('Jumlah RT', data.jmlRT),
+                    _buildStatCard('Jumlah Rumah (unit)', data.jmlRumah),
+                    _buildStatCard('Jumlah Jiwa (Orang)', data.jmlJiwa),
                     _buildStatCard(
                       'Estimasi Timbulan',
-                      '1,611.08',
+                      data.estimasiTimbulan,
                       subtitle: '(kg/hari)',
                     ),
                     _buildSortingStatCard(
-                      percentage: '0.23%',
+                      percentage: data.persenRumahMemilah,
                       title: 'Rumah Memilah',
-                      count: '1',
-                      progress: 0.0023,
+                      count: data.jmlRumahMemilah,
+                      progress: data.progressRumahMemilah,
                       color: AppColors.green.normal,
                       backgroundColor: AppColors.green.light,
                     ),
                     _buildSortingStatCard(
-                      percentage: '0%',
+                      percentage: data.persenRumahNasabah,
                       title: 'Jumlah Rumah Nasabah',
-                      count: '0',
-                      progress: 0.0,
+                      count: data.jmlRumahNasabah,
+                      progress: data.progressRumahNasabah,
                       color: AppColors.blue.normal,
                       backgroundColor: AppColors.blue.light,
                     ),
@@ -96,20 +182,20 @@ class _HomePageState extends State<HomePage> {
 
                 _buildSectionTitle('Volume Jenis Sampah'),
                 const SizedBox(height: 10),
-                _buildWasteVolumeCard(),
+                _buildWasteVolumeCard(data), 
                 const SizedBox(height: 12),
                 
                 _buildSectionTitle('Bank Sampah'),
                 const SizedBox(height: 10),
-                _buildWasteBankCard(),
+                _buildWasteBankCard(data), 
                 const SizedBox(height: 12),
                 
                 _buildSectionTitle('Grafik Jumlah Rumah Memilah Per Bulan'),
                 const SizedBox(height: 10),
-                _buildMonthlyStatsGraphCard(),
+                _buildMonthlyStatsGraphCard(data), 
                 const SizedBox(height: 12),
 
-                _buildWasteBalanceCard(),
+                _buildWasteBalanceCard(data), 
                 const SizedBox(height: 100), 
               ],
             ),
@@ -119,7 +205,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(DashboardData data) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(bottom: 20),
@@ -159,7 +245,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Kelurahan Grogol',
+                          data.kelurahan, 
                           style: TextStyle(
                             fontFamily: 'InstrumentSans', 
                             color: AppColors.white.normal,
@@ -203,7 +289,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       Text(
-                        'RW 7',
+                        data.rw, 
                         style: TextStyle(
                           fontFamily: 'InstrumentSans', 
                           fontSize: 28,
@@ -236,7 +322,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             Text(
-                              'Rhafael Pahala',
+                              data.pendamping, 
                               style: TextStyle(
                                 fontFamily: 'InstrumentSans', 
                                 color: AppColors.white.normal,
@@ -303,7 +389,7 @@ class _HomePageState extends State<HomePage> {
             FittedBox(
               fit: BoxFit.scaleDown,
               child: Text(
-                value,
+                value, 
                 style: TextStyle(
                   fontFamily: 'InstrumentSans', 
                   fontSize: 30, 
@@ -340,7 +426,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              percentage,
+              percentage, 
               style: TextStyle(
                 fontFamily: 'InstrumentSans', 
                 fontSize: 30,
@@ -350,7 +436,7 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 4),
             Text(
-              title,
+              title, 
               maxLines: 2, 
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -363,7 +449,7 @@ class _HomePageState extends State<HomePage> {
             const Spacer(), 
             LinearPercentIndicator(
               padding: EdgeInsets.zero,
-              percent: progress,
+              percent: progress, 
               progressColor: color,
               backgroundColor: AppColors.blue.lightActive,
               barRadius: const Radius.circular(10), 
@@ -372,7 +458,7 @@ class _HomePageState extends State<HomePage> {
             Align(
               alignment: Alignment.centerRight,
               child: Text(
-                count,
+                count, 
                 style: TextStyle(
                   fontFamily: 'InstrumentSans', 
                   fontSize: 16, 
@@ -398,10 +484,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildWasteVolumeCard() {
+  Widget _buildWasteVolumeCard(DashboardData data) {
     final List<String> wasteTypes = ['Organik', 'Anorganik', 'B3'];
-    final List<double> percentages = [0.0, 0.0, 0.0];
-    final List<String> kgs = ['0', '0', '0'];
+    final List<double> percentages = data.wastePercentages;
+    final List<String> kgs = data.wasteKgs;
 
     return Card(
       elevation: 2,
@@ -448,9 +534,9 @@ class _HomePageState extends State<HomePage> {
             CircularPercentIndicator(
               radius: 50.0,
               lineWidth: 10.0,
-              percent: percentages[_selectedWasteTypeIndex],
+              percent: percentages[_selectedWasteTypeIndex], 
               center: Text(
-                "${kgs[_selectedWasteTypeIndex]} kg",
+                "${kgs[_selectedWasteTypeIndex]} kg", 
                 style: const TextStyle(
                   fontFamily: 'InstrumentSans', 
                   fontWeight: FontWeight.w700,
@@ -477,7 +563,7 @@ class _HomePageState extends State<HomePage> {
                 CircularPercentIndicator(
                   radius: 25.0,
                   lineWidth: 6.0,
-                  percent: 0.0,
+                  percent: 0.0, 
                   center: const Text(
                     "0 kg",
                     style: TextStyle(
@@ -497,7 +583,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildWasteBankCard() {
+  Widget _buildWasteBankCard(DashboardData data) {
     return Card(
       elevation: 2,
       shadowColor: AppColors.black.light,
@@ -534,9 +620,9 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.w400,
                       ),
                     ),
-                    const Text(
-                      'Belum ada bank sampah',
-                      style: TextStyle(
+                    Text(
+                      data.statusBankSampah, 
+                      style: const TextStyle(
                         fontFamily: 'InstrumentSans', 
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -576,7 +662,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMonthlyStatsGraphCard() {
+  Widget _buildMonthlyStatsGraphCard(DashboardData data) {
     return Card(
       elevation: 2,
       shadowColor: AppColors.black.light,
@@ -624,11 +710,12 @@ class _HomePageState extends State<HomePage> {
                         interval: 1,
                         getTitlesWidget: (value, meta) {
                           final index = value.toInt();
-                          if (index >= 0 && index < _bottomTitles.length) {
+                          final titles = data.bottomChartTitles; 
+                          if (index >= 0 && index < titles.length) {
                             return SideTitleWidget(
                               axisSide: meta.axisSide,
                               child: Text(
-                                _bottomTitles[index], 
+                                titles[index], 
                                 style: TextStyle(
                                   fontFamily: 'InstrumentSans', 
                                   color: AppColors.white.darker,
@@ -673,18 +760,18 @@ class _HomePageState extends State<HomePage> {
                   maxY: 24000,
                   lineBarsData: [
                     LineChartBarData(
-                      spots: _accumulationData,
+                      spots: data.accumulationData, 
                       isCurved: true,
-                      color: _lineColors[0],
+                      color: data.lineColors[0], 
                       barWidth: 3,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: true),
                       belowBarData: BarAreaData(show: false),
                     ),
                     LineChartBarData(
-                      spots: _checkPerMonthData,
+                      spots: data.checkPerMonthData, 
                       isCurved: true,
-                      color: _lineColors[1],
+                      color: data.lineColors[1], 
                       barWidth: 3,
                       isStrokeCapRound: true,
                       dotData: const FlDotData(show: true),
@@ -722,9 +809,9 @@ class _HomePageState extends State<HomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildLegendItem(_lineColors[0], 'Akumulasi'),
+                _buildLegendItem(data.lineColors[0], 'Akumulasi'), 
                 const SizedBox(width: 20),
-                _buildLegendItem(_lineColors[1], 'Check Perbulan'),
+                _buildLegendItem(data.lineColors[1], 'Check Perbulan'), 
               ],
             )
           ],
@@ -733,7 +820,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildWasteBalanceCard() {
+  Widget _buildWasteBalanceCard(DashboardData data) {
     return Card(
       elevation: 2,
       shadowColor: AppColors.black.light,
@@ -755,9 +842,9 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 5),
-            const Text(
-              '1,611.08 kg',
-              style: TextStyle(
+            Text(
+              data.neracaSampah, 
+              style: const TextStyle(
                 fontFamily: 'InstrumentSans', 
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -769,4 +856,3 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
-
