@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../widgets/data_menu_drawer_widget.dart';
@@ -9,6 +10,9 @@ import 'tambah_nik_page.dart';
 import 'package:bps_rw/features/checklist/presentation/pages/checklist_page.dart';
 import 'package:bps_rw/features/laporan/presentation/pages/laporan_page.dart';
 import 'package:bps_rw/features/profile/presentation/pages/profile_page.dart';
+import '../blocs/data_rumah/data_rumah_cubit.dart';
+import '../blocs/data_rumah/data_rumah_state.dart';
+import '../../domain/entities/data_rumah.dart';
 
 class DataPage extends StatefulWidget {
   const DataPage({super.key});
@@ -20,82 +24,90 @@ class DataPage extends StatefulWidget {
 
 class _DataPageState extends State<DataPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String? _selectedStatus = 'Semua Status';
-  String? _selectedRT = 'Semua RT';
-  final TextEditingController _searchController = TextEditingController();
-  final List<Map<String, dynamic>> _dataRumah = [
-    {
-      "rt": "099", "rw": "007", "is_synced": true, "is_edited": true,
-      "alamat_dinas": "dinas lh",
-      "alamat_full": "KOTA ADM. JAKARTA BARAT, GROGOL PETAMBURAN, GROGOL",
-      "nama": "adam",
-      "status_aktif": true,
-      "status_checklist": true,
-    },
-    {
-      "rt": "099", "rw": "007", "is_synced": true, "is_edited": true,
-      "alamat_dinas": "jl. MAndala v no 67",
-      "alamat_full": "KOTA ADM. JAKARTA BARAT, GROGOL PETAMBURAN, GROGOL",
-      "nama": "JL. MAndala v no 67",
-      "status_aktif": false,
-      "status_checklist": false,
-    },
-    {
-      "rt": "099", "rw": "007", "is_synced": false, "is_edited": true,
-      "alamat_dinas": "jl.muaran buara No.3",
-      "alamat_full": "KOTA ADM. JAKARTA BARAT, GROGOL PETAMBURAN, GROGOL",
-      "nama": "jl.muaran buara No.3",
-      "status_aktif": false,
-      "status_checklist": false,
-    },
-     {
-      "rt": "099", "rw": "007", "is_synced": false, "is_edited": true,
-      "alamat_dinas": "jl.muaran buara No.5",
-      "alamat_full": "KOTA ADM. JAKARTA BARAT, GROGOL PETAMBURAN, GROGOL",
-      "nama": "jl.muaran buara No.5",
-      "status_aktif": false,
-      "status_checklist": false,
-    },
-  ];
+  Future<void> _navigateToEditPage(DataRumah data) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditRumahPage(dataRumah: data.toMap()), 
+      ),
+    );
+    if (result == true && mounted) {
+      context.read<DataRumahCubit>().fetchDataRumah();
+    }
+  }
+
+  Future<void> _navigateToTambahNikPage(DataRumah data) async {
+     final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TambahNikPage(dataRumah: data.toMap()), 
+      ),
+    );
+    if (result == true && mounted) {
+      context.read<DataRumahCubit>().fetchDataRumah();
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: AppColors.white.normal,
-      drawer: const DataMenuDrawer(activeRoute: DataPage.routeName),
-      bottomNavigationBar: CustomBottomNavbar(
-        selectedIndex: 1,
-         onItemTapped: (index) {
-          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (index == 1) {}
-          if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
-          if (index == 3) Navigator.pushReplacementNamed(context, LaporanPage.routeName);
-          if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
-        },
-      ),
-
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeaderAndFilters(),
-
-            ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              itemCount: _dataRumah.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
-                return _buildDataCard(_dataRumah[index]);
-              },
-            ),
-          ],
+    return BlocProvider(
+      create: (context) => DataRumahCubit()..fetchDataRumah(),
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: AppColors.white.normal,
+        drawer: const DataMenuDrawer(activeRoute: DataPage.routeName),
+        bottomNavigationBar: CustomBottomNavbar(
+          selectedIndex: 1,
+          onItemTapped: (index) {
+            if (index == 0) Navigator.pushReplacementNamed(context, '/home');
+            if (index == 1) {}
+            if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
+            if (index == 3) Navigator.pushReplacementNamed(context, LaporanPage.routeName);
+            if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
+          },
+        ),
+        body: BlocBuilder<DataRumahCubit, DataRumahState>(
+          builder: (context, state) {
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeaderAndFilters(context, state),
+                  if (state.status == DataRumahStatus.loading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 150),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  
+                  if (state.status == DataRumahStatus.failure)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 150),
+                      child: Center(child: Text(state.errorMessage ?? 'Gagal memuat data')),
+                    ),
+                  
+                  if (state.status == DataRumahStatus.success)
+                    ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: state.filteredDataRumah.length, 
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemBuilder: (context, index) {
+                        final data = state.filteredDataRumah[index]; 
+                        return _buildDataCard(data); 
+                      },
+                    ),
+                  
+                  const SizedBox(height: 100),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildHeaderAndFilters() {
+  Widget _buildHeaderAndFilters(BuildContext context, DataRumahState state) {
     return Container(
       padding: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
@@ -137,42 +149,21 @@ class _DataPageState extends State<DataPage> {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  _buildFilterButton('Filter Status:', _selectedStatus ?? 'Semua Status'),
+                  _buildFilterButton(
+                    context,
+                    'Filter Status:', 
+                    state.selectedStatus,
+                    state.statusOptions,
+                  ),
                   const SizedBox(width: 16),
-                  _buildFilterButton('Filter RT:', _selectedRT ?? 'Semua RT'),
+                  _buildFilterButton(
+                    context,
+                    'Filter RT:', 
+                    state.selectedRT,
+                    state.rtOptions,
+                  ),
                 ],
               ),
-              // const SizedBox(height: 16),
-              // TextField(
-              //   controller: _searchController,
-              //   style: const TextStyle( 
-              //     fontFamily: 'InstrumentSans',
-              //     fontSize: 14,
-              //   ),
-              //   decoration: InputDecoration(
-              //     hintText: 'Cari alamat atau nama pemilik...',
-              //     hintStyle: TextStyle( 
-              //       fontFamily: 'InstrumentSans',
-              //       color: AppColors.black.normal.withOpacity(0.54), 
-              //     ),
-              //     prefixIcon: Icon(LucideIcons.search, color: AppColors.black.normal.withOpacity(0.54)), 
-              //     filled: true,
-              //     fillColor: AppColors.white.normal, 
-              //     contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
-              //     border: OutlineInputBorder(
-              //       borderRadius: BorderRadius.circular(12),
-              //       borderSide: BorderSide.none,
-              //     ),
-              //     enabledBorder: OutlineInputBorder(
-              //       borderRadius: BorderRadius.circular(12),
-              //       borderSide: BorderSide.none,
-              //     ),
-              //     focusedBorder: OutlineInputBorder(
-              //       borderRadius: BorderRadius.circular(12),
-              //       borderSide: BorderSide(color: AppColors.blue.normal),
-              //     ),
-              //   ),
-              // ),
             ],
           ),
         ),
@@ -180,7 +171,7 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  Widget _buildFilterButton(String title, String value) {
+  Widget _buildFilterButton(BuildContext context, String title, String value, List<String> items) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,7 +191,7 @@ class _DataPageState extends State<DataPage> {
             child: InkWell( 
               borderRadius: BorderRadius.circular(12), 
               onTap: () {
-                _showFilterSheet(context, title, (title == 'Filter Status:') ? ['Semua Status', 'Aktif', 'Tidak Aktif'] : ['Semua RT', '099', '100']);
+                _showFilterSheet(context, title, items, value);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -208,7 +199,7 @@ class _DataPageState extends State<DataPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      value, 
+                      value,
                       style: const TextStyle(
                         fontFamily: 'InstrumentSans', 
                         fontSize: 14
@@ -225,7 +216,9 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  void _showFilterSheet(BuildContext context, String title, List<String> items) {
+  void _showFilterSheet(BuildContext context, String title, List<String> items, String currentValue) {
+    final cubit = context.read<DataRumahCubit>();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -252,27 +245,39 @@ class _DataPageState extends State<DataPage> {
                 )
               ),
               const SizedBox(height: 16),
-              ListView.builder(
-                shrinkWrap: true,
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Text(
-                      items[index],
-                      style: const TextStyle(fontFamily: 'InstrumentSans'), 
-                    ),
-                    onTap: () {
-                      setState(() {
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    final isSelected = item == currentValue;
+                    return ListTile(
+                      title: Text(
+                        item,
+                        style: TextStyle(
+                          fontFamily: 'InstrumentSans',
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? AppColors.blue.normal : AppColors.black.normal,
+                        ), 
+                      ),
+                      trailing: isSelected 
+                        ? Icon(LucideIcons.check, color: AppColors.blue.normal) 
+                        : null,
+                      onTap: () {
                         if (title == 'Filter Status:') {
-                          _selectedStatus = items[index];
+                          cubit.changeFilter(status: item);
                         } else {
-                          _selectedRT = items[index];
+                          cubit.changeFilter(rt: item);
                         }
-                      });
-                      Navigator.pop(context);
-                    },
-                  );
-                },
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -282,13 +287,13 @@ class _DataPageState extends State<DataPage> {
     );
   }
 
-  Widget _buildDataCard(Map<String, dynamic> data) {
+  Widget _buildDataCard(DataRumah data) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: ClipRRect( 
         borderRadius: BorderRadius.circular(15.0),
         child: Slidable(
-          key: ValueKey(data["alamat_dinas"]), 
+          key: ValueKey(data.alamatDinas), 
           groupTag: 'data-rumah-list',
           endActionPane: ActionPane(
             motion: const StretchMotion(), 
@@ -296,12 +301,7 @@ class _DataPageState extends State<DataPage> {
             children: [
             SlidableAction(
               onPressed: (context) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditRumahPage(dataRumah: data),
-                  ),
-                );
+                _navigateToEditPage(data);
               },
               backgroundColor: AppColors.yellow.normal,
                 foregroundColor: AppColors.white.normal,
@@ -310,12 +310,7 @@ class _DataPageState extends State<DataPage> {
               ),
             SlidableAction(
               onPressed: (context) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TambahNikPage(dataRumah: data),
-                  ),
-                );
+                _navigateToTambahNikPage(data);
               },
               backgroundColor: AppColors.green.normal,
                 foregroundColor: AppColors.white.normal,
@@ -347,24 +342,24 @@ class _DataPageState extends State<DataPage> {
                       Row(
                         children: [
                           _buildTag(
-                            'RT ${data["rt"]}', 
+                            'RT ${data.rt}', 
                             AppColors.blue.light,
                             icon: LucideIcons.home
                           ),
                           const SizedBox(width: 8),
-                          _buildTag('RW ${data["rw"]}', AppColors.blue.light),
+                          _buildTag('RW ${data.rw}', AppColors.blue.light), 
                         ],
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   
-                  _buildInfoRow(LucideIcons.mapPin, data["alamat_dinas"], AppColors.blue.normal),
+                  _buildInfoRow(LucideIcons.mapPin, data.alamatDinas, AppColors.blue.normal), 
                   const SizedBox(height: 4),
                   Padding(
                     padding: const EdgeInsets.only(left: 32),
                     child: Text(
-                      data["alamat_full"],
+                      data.alamatFull, 
                       style: TextStyle(
                         fontFamily: 'InstrumentSans', 
                         fontSize: 12, 
@@ -374,7 +369,7 @@ class _DataPageState extends State<DataPage> {
                   ),
                   const SizedBox(height: 12),
                   
-                  _buildInfoRow(LucideIcons.user, data["nama"], AppColors.blue.normal),
+                  _buildInfoRow(LucideIcons.user, data.nama, AppColors.blue.normal), 
                   const SizedBox(height: 16),
                   
                   Row( 
@@ -390,16 +385,16 @@ class _DataPageState extends State<DataPage> {
                       const SizedBox(width: 12),
                       _buildStatusChip( 
                         "Aktif", 
-                        data["status_aktif"] ? LucideIcons.checkCircle2 : LucideIcons.xCircle, 
-                        data["status_aktif"] ? AppColors.green.dark : AppColors.red.normal, 
-                        data["status_aktif"] ? AppColors.green.light : AppColors.red.light
+                        data.statusAktif ? LucideIcons.checkCircle2 : LucideIcons.xCircle, 
+                        data.statusAktif ? AppColors.green.dark : AppColors.red.normal, 
+                        data.statusAktif ? AppColors.green.light : AppColors.red.light
                       ),
                       const SizedBox(width: 12),
                       _buildStatusChip( 
                         "Checklist", 
-                        data["status_checklist"] ? LucideIcons.checkCircle2 : LucideIcons.xCircle, 
-                        data["status_checklist"] ? AppColors.green.dark : AppColors.red.normal, 
-                        data["status_checklist"] ? AppColors.green.light : AppColors.red.light
+                        data.statusChecklist ? LucideIcons.checkCircle2 : LucideIcons.xCircle, 
+                        data.statusChecklist ? AppColors.green.dark : AppColors.red.normal, 
+                        data.statusChecklist ? AppColors.green.light : AppColors.red.light
                       ),
                     ],
                   )
@@ -486,6 +481,3 @@ class _DataPageState extends State<DataPage> {
     );
   }
 }
-
-
-
