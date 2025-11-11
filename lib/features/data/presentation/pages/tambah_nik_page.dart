@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lottie/lottie.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
 import 'dart:async';
+import '../blocs/tambah_nik/tambah_nik_cubit.dart';
+import '../blocs/tambah_nik/tambah_nik_state.dart';
+import '../../domain/entities/data_rumah.dart';
 
 class TambahNikPage extends StatefulWidget {
   const TambahNikPage({super.key, required this.dataRumah});
-  
-  final Map<String, dynamic> dataRumah;
-
+  final DataRumah dataRumah;
   @override
   State<TambahNikPage> createState() => _TambahNikPageState();
 }
@@ -28,16 +30,12 @@ class _TambahNikPageState extends State<TambahNikPage> {
   @override
   void initState() {
     super.initState();
-    _alamatController.text = widget.dataRumah['alamat_dinas'] ?? '';
-    _rtController.text = widget.dataRumah['rt'] ?? '';
-    _rwController.text = widget.dataRumah['rw'] ?? '';
+    _alamatController.text = widget.dataRumah.alamatDinas;
+    _rtController.text = widget.dataRumah.rt;
+    _rwController.text = widget.dataRumah.rw;
     _kelurahanController.text = "GROGOL"; 
     _kecamatanController.text = "GROGOL PETAMBURAN";
     _kotaController.text = "KOTA ADM. JAKARTA BARAT";
-    _namaKepalaController.text = '';
-    _namaPemilikController.text = '';
-    _bangunanIdController.text = '';
-    _nasabahStatusController.text = '';
   }
 
   @override
@@ -56,28 +54,29 @@ class _TambahNikPageState extends State<TambahNikPage> {
     super.dispose();
   }
 
-  void _onCekDataPressed() {
-    setState(() {
-      _namaKepalaController.text = "Bambang Sudarsono (Dummy)";
-      _namaPemilikController.text = "Bambang Sudarsono (Dummy)";
-      _bangunanIdController.text = "50001234 (Dummy)";
-      _nasabahStatusController.text = "True (Dummy)";
-    });
-    print("Tombol Cek Data ditekan, data dummy diisi.");
+  void _onCekDataPressed(BuildContext context) {
+    context.read<TambahNikCubit>().cekData(_ktpController.text);
   }
 
-  Future<void> _onSavePressed() async {
-    print("Tombol Save ditekan.");
-    await _showAnimatedDialog(
-      "Berhasil Disimpan!", 
-      "Data NIK baru telah berhasil ditambahkan ke rumah ini (dummy)."
-    );
-    if (mounted) {
-      Navigator.pop(context);
-    }
+  Future<void> _onSavePressed(BuildContext context) async {
+    final formData = {
+      "ktp": _ktpController.text,
+      "namaKepala": _namaKepalaController.text,
+      "alamat": _alamatController.text,
+      "namaPemilik": _namaPemilikController.text,
+      "rt": _rtController.text,
+      "rw": _rwController.text,
+      "kelurahan": _kelurahanController.text,
+      "kecamatan": _kecamatanController.text,
+      "kota": _kotaController.text,
+      "bangunanId": _bangunanIdController.text,
+      "nasabahStatus": _nasabahStatusController.text,
+      "alamatDinas_id": widget.dataRumah.alamatDinas,
+    };
+    context.read<TambahNikCubit>().saveData(formData);
   }
 
-  Future<void> _showAnimatedDialog(String title, String message) async {
+  Future<void> _showAnimatedDialog(String title, String message, {bool isSuccess = true}) async {
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -93,7 +92,7 @@ class _TambahNikPageState extends State<TambahNikPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Lottie.asset(
-                'assets/lottie/success.json',
+                isSuccess ? 'assets/lottie/success.json' : 'assets/lottie/error.json',
                 width: 120,
                 height: 120,
                 repeat: false,
@@ -127,175 +126,233 @@ class _TambahNikPageState extends State<TambahNikPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white.normal, 
-      appBar: AppBar(
-        title: const Text(
-          'Input NIK Rumah',
-          style: TextStyle(
-            fontFamily: 'InstrumentSans',
-            fontWeight: FontWeight.bold,
+    return BlocProvider(
+      create: (context) => TambahNikCubit(),
+      child: Scaffold(
+        backgroundColor: AppColors.white.normal, 
+        appBar: AppBar(
+          title: const Text(
+            'Input NIK Rumah',
+            style: TextStyle(
+              fontFamily: 'InstrumentSans',
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          backgroundColor: AppColors.blue.normal,
+          foregroundColor: AppColors.white.normal,
+          elevation: 0,
+          centerTitle: true,
         ),
-        backgroundColor: AppColors.blue.normal,
-        foregroundColor: AppColors.white.normal,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildLabel("No KTP"),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: _buildTextField(
-                      controller: _ktpController,
-                      hint: '16 digit NIK...',
-                      isEnabled: true,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _onCekDataPressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.yellow.normal,
-                        foregroundColor: AppColors.black.normal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+        body: BlocConsumer<TambahNikCubit, TambahNikState>(
+          listener: (context, state) {
+            if (state.checkStatus == TambahNikCheckStatus.success) {
+              final data = state.checkedData;
+              if (data != null) {
+                _namaKepalaController.text = data["namaKepala"];
+                _namaPemilikController.text = data["namaPemilik"];
+                _bangunanIdController.text = data["bangunanId"];
+                _nasabahStatusController.text = data["nasabahStatus"];
+              }
+            }
+            if (state.checkStatus == TambahNikCheckStatus.failure) {
+              _showAnimatedDialog(
+                "Gagal Mencari NIK", 
+                state.errorMessage ?? "Terjadi kesalahan.",
+                isSuccess: false,
+              );
+            }
+            if (state.submitStatus == TambahNikSubmitStatus.success) {
+              _showAnimatedDialog(
+                "Berhasil Disimpan!", 
+                "Data NIK baru telah berhasil ditambahkan."
+              ).then((_) {
+                if (mounted) {
+                  Navigator.pop(context, true); 
+                }
+              });
+            }
+            if (state.submitStatus == TambahNikSubmitStatus.failure) {
+              _showAnimatedDialog(
+                "Gagal Menyimpan", 
+                state.errorMessage ?? "Terjadi kesalahan.",
+                isSuccess: false,
+              );
+            }
+          },
+          builder: (context, state) {
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildLabel("No KTP"),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: _buildTextField(
+                            controller: _ktpController,
+                            hint: '16 digit NIK...',
+                            isEnabled: true,
+                            keyboardType: TextInputType.number,
+                          ),
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      child: Text(
-                            "CEK DATA",
-                            style: TextStyle(
-                              color: AppColors.white.normal,
-                              fontFamily: 'InstrumentSans',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: state.checkStatus == TambahNikCheckStatus.loading
+                              ? null 
+                              : () => _onCekDataPressed(context), 
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.yellow.normal,
+                              foregroundColor: AppColors.black.normal,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                            ),
+                            child: state.checkStatus == TambahNikCheckStatus.loading
+                              ? const SizedBox(
+                                  height: 16, 
+                                  width: 16, 
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                                )
+                              : Text(
+                                  "CEK DATA",
+                                  style: TextStyle(
+                                    color: AppColors.white.normal,
+                                    fontFamily: 'InstrumentSans',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLabel("Nama Kepala Rumah Tangga"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _namaKepalaController, isEnabled: true),
+                    const SizedBox(height: 16),
+                    _buildLabel("Alamat"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _alamatController, isEnabled: true),
+                    const SizedBox(height: 16),
+                    _buildLabel("Nama Pemilik KTP"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _namaPemilikController, isEnabled: true), 
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel("RT"),
+                              const SizedBox(height: 8),
+                              _buildTextField(controller: _rtController, isEnabled: true), 
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel("RW"),
+                              const SizedBox(height: 8),
+                              _buildTextField(controller: _rwController, isEnabled: true), 
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildLabel("Kelurahan"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _kelurahanController, isEnabled: true), 
+                    const SizedBox(height: 16),
+                    _buildLabel("Kecamatan"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _kecamatanController, isEnabled: true), 
+                    const SizedBox(height: 16),
+                    _buildLabel("Kota"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _kotaController, isEnabled: true), 
+                    const SizedBox(height: 16),
+                    _buildLabel("Bangunan ID"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _bangunanIdController, isEnabled: true), 
+                    const SizedBox(height: 16),
+                    _buildLabel("Nasabah Status"),
+                    const SizedBox(height: 8),
+                    _buildTextField(controller: _nasabahStatusController, isEnabled: true), 
+                    const SizedBox(height: 32),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context), 
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.red.normal,
+                              foregroundColor: AppColors.white.normal,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 7),
+                            ),
+                            child: const Text(
+                              "BATAL",
+                              style: TextStyle(
+                                fontFamily: 'InstrumentSans',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           ),
-                    ),
-                  )
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildLabel("Nama Kepala Rumah Tangga"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _namaKepalaController, isEnabled: true),
-              const SizedBox(height: 16),
-              _buildLabel("Alamat"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _alamatController, isEnabled: true),
-              const SizedBox(height: 16),
-              _buildLabel("Nama Pemilik KTP"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _namaPemilikController, isEnabled: true), 
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabel("RT"),
-                        const SizedBox(height: 8),
-                        _buildTextField(controller: _rtController, isEnabled: true), 
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: state.submitStatus == TambahNikSubmitStatus.loading
+                              ? null
+                              : () => _onSavePressed(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.green.normal,
+                              foregroundColor: AppColors.white.normal,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 7),
+                            ),
+                            child: state.submitStatus == TambahNikSubmitStatus.loading
+                              ? const SizedBox(
+                                  height: 16, 
+                                  width: 16, 
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                                )
+                              : const Text(
+                                  "SIMPAN",
+                                  style: TextStyle(
+                                    fontFamily: 'InstrumentSans',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabel("RW"),
-                        const SizedBox(height: 8),
-                        _buildTextField(controller: _rwController, isEnabled: true), 
-                      ],
-                    ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildLabel("Kelurahan"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _kelurahanController, isEnabled: true), 
-              const SizedBox(height: 16),
-              _buildLabel("Kecamatan"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _kecamatanController, isEnabled: true), 
-              const SizedBox(height: 16),
-              _buildLabel("Kota"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _kotaController, isEnabled: true), 
-              const SizedBox(height: 16),
-              _buildLabel("Bangunan ID"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _bangunanIdController, isEnabled: true), 
-              const SizedBox(height: 16),
-              _buildLabel("Nasabah Status"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _nasabahStatusController, isEnabled: true), 
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context), 
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.red.normal,
-                        foregroundColor: AppColors.white.normal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                      ),
-                      child: const Text(
-                        "BATAL",
-                        style: TextStyle(
-                          fontFamily: 'InstrumentSans',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _onSavePressed,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.green.normal,
-                        foregroundColor: AppColors.white.normal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                      ),
-                      child: const Text(
-                        "SIMPAN",
-                        style: TextStyle(
-                          fontFamily: 'InstrumentSans',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -334,7 +391,7 @@ class _TambahNikPageState extends State<TambahNikPage> {
           color: AppColors.black.normal.withOpacity(0.3),
         ),
         filled: true,
-        fillColor: AppColors.white.normal, 
+        fillColor: isEnabled ? AppColors.white.normal : AppColors.black.light, 
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -368,4 +425,3 @@ class _TambahNikPageState extends State<TambahNikPage> {
     );
   }
 }
-

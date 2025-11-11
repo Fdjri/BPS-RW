@@ -48,7 +48,7 @@ class _DataPageState extends State<DataPage> {
     final result = await Navigator.push(
       context, 
       MaterialPageRoute(
-        builder: (context) => TambahNikPage(dataRumah: data.toMap()),
+        builder: (context) => TambahNikPage(dataRumah: data),
       ),
     );
     if (result == true && context.mounted) {
