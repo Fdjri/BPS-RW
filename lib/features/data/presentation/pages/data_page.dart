@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:lottie/lottie.dart';
+import 'package:lottie/lottie.dart'; 
 import '../widgets/data_menu_drawer_widget.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
 import '../../../../core/presentation/widgets/custom_bottom_navbar.dart';
@@ -25,26 +25,33 @@ class DataPage extends StatefulWidget {
 
 class _DataPageState extends State<DataPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  Future<void> _navigateToEditPage(DataRumah data) async {
+
+  Future<void> _navigateToEditPage(BuildContext context, DataRumah data) async {
+    final allRtOptions = context.read<DataRumahCubit>().state.rtOptions;
+    if (!context.mounted) return; 
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditRumahPage(dataRumah: data.toMap()), 
+        builder: (context) => EditRumahPage(
+          dataRumah: data, 
+          allRtOptions: allRtOptions, 
+        ),
       ),
     );
-    if (result == true && mounted) {
+    if (result == true && context.mounted) {
       context.read<DataRumahCubit>().fetchDataRumah();
     }
   }
 
-  Future<void> _navigateToTambahNikPage(DataRumah data) async {
-     final result = await Navigator.push(
-      context,
+  Future<void> _navigateToTambahNikPage(BuildContext context, DataRumah data) async {
+    if (!context.mounted) return;
+    final result = await Navigator.push(
+      context, 
       MaterialPageRoute(
-        builder: (context) => TambahNikPage(dataRumah: data.toMap()), 
+        builder: (context) => TambahNikPage(dataRumah: data.toMap()),
       ),
     );
-    if (result == true && mounted) {
+    if (result == true && context.mounted) {
       context.read<DataRumahCubit>().fetchDataRumah();
     }
   }
@@ -67,6 +74,7 @@ class _DataPageState extends State<DataPage> {
             if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
           },
         ),
+
         body: BlocBuilder<DataRumahCubit, DataRumahState>(
           builder: (context, state) {
             return SingleChildScrollView(
@@ -96,6 +104,7 @@ class _DataPageState extends State<DataPage> {
                             return _buildDataCard(data); 
                           },
                         ),
+                  
                   const SizedBox(height: 100),
                 ],
               ),
@@ -298,8 +307,8 @@ class _DataPageState extends State<DataPage> {
             extentRatio: 0.5, 
             children: [
             SlidableAction(
-              onPressed: (context) {
-                _navigateToEditPage(data);
+              onPressed: (context) { 
+                _navigateToEditPage(context, data);
               },
               backgroundColor: AppColors.yellow.normal,
                 foregroundColor: AppColors.white.normal,
@@ -308,7 +317,7 @@ class _DataPageState extends State<DataPage> {
               ),
             SlidableAction(
               onPressed: (context) {
-                _navigateToTambahNikPage(data);
+                _navigateToTambahNikPage(context, data); 
               },
               backgroundColor: AppColors.green.normal,
                 foregroundColor: AppColors.white.normal,

@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:lottie/lottie.dart'; 
 import 'dart:async'; 
 import '../../../../core/presentation/utils/app_colors.dart';
+import '../blocs/edit_rumah/edit_rumah_cubit.dart';
+import '../blocs/edit_rumah/edit_rumah_state.dart';
+import '../../domain/entities/data_rumah.dart'; 
 
 class EditRumahPage extends StatefulWidget {
-  const EditRumahPage({super.key, required this.dataRumah});
+  const EditRumahPage({
+    super.key, 
+    required this.dataRumah, 
+    required this.allRtOptions, 
+  });
 
-  final Map<String, dynamic> dataRumah;
+  final DataRumah dataRumah;
+  final List<String> allRtOptions;
 
   @override
   State<EditRumahPage> createState() => _EditRumahPageState();
@@ -16,20 +25,12 @@ class EditRumahPage extends StatefulWidget {
 class _EditRumahPageState extends State<EditRumahPage> {
   late TextEditingController _namaController;
   late TextEditingController _alamatController;
-  
-  late String _selectedRT;
-  final List<String> _rtOptions = ['099', '100', '101']; 
 
   @override
   void initState() {
     super.initState();
-    _namaController = TextEditingController(text: widget.dataRumah['nama'] ?? '');
-    _alamatController = TextEditingController(text: widget.dataRumah['alamat_dinas'] ?? '');
-    _selectedRT = widget.dataRumah['rt'] ?? _rtOptions[0]; 
-
-    if (!_rtOptions.contains(_selectedRT)) {
-      _rtOptions.insert(0, _selectedRT);
-    }
+    _namaController = TextEditingController(text: widget.dataRumah.nama);
+    _alamatController = TextEditingController(text: widget.dataRumah.alamatDinas);
   }
 
   @override
@@ -39,30 +40,18 @@ class _EditRumahPageState extends State<EditRumahPage> {
     super.dispose();
   }
 
-  String get _rw => widget.dataRumah['rw'] ?? 'N/A';
+  String get _rw => widget.dataRumah.rw;
   String get _kelurahan => "GROGOL"; 
   String get _kecamatan => "GROGOL PETAMBURAN"; 
   String get _kota => "KOTA ADM. JAKARTA BARAT"; 
-  bool get _statusAktif => widget.dataRumah['status_aktif'] ?? false;
-  bool get _statusChecklist => widget.dataRumah['status_checklist'] ?? false;
+  bool get _statusAktif => widget.dataRumah.statusAktif;
+  bool get _statusChecklist => widget.dataRumah.statusChecklist;
 
-  Future<void> _onSavePressed() async {
-    print("Saving data...");
-    print("RT: $_selectedRT");
-    print("Nama: ${_namaController.text}");
-    print("Alamat: ${_alamatController.text}");
-    
-    await _showAnimatedDialog(
-      "Berhasil Disimpan!", 
-      "Perubahan detail rumah telah berhasil disimpan (dummy)."
-    );
-
-    if (mounted) {
-       Navigator.pop(context);
-    }
+  Future<void> _onSavePressed(BuildContext context) async {
+    context.read<EditRumahCubit>().saveChanges();
   }
 
-  Future<void> _showAnimatedDialog(String title, String message) async {
+  Future<void> _showAnimatedDialog(String title, String message, {bool isSuccess = true}) async {
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -79,7 +68,7 @@ class _EditRumahPageState extends State<EditRumahPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Lottie.asset(
-                'assets/lottie/success.json', 
+                isSuccess ? 'assets/lottie/success.json' : 'assets/lottie/error.json', 
                 width: 120,
                 height: 120,
                 repeat: false,
@@ -113,152 +102,205 @@ class _EditRumahPageState extends State<EditRumahPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white.normal,
-      appBar: AppBar(
-        title: const Text(
-          'Edit Detail Rumah',
-          style: TextStyle(
-            fontFamily: 'InstrumentSans',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: AppColors.blue.normal,
-        foregroundColor: AppColors.white.normal,
-        elevation: 0,
-        centerTitle: true,
+    return BlocProvider(
+      create: (context) => EditRumahCubit(
+        initialData: widget.dataRumah,
+        allRtOptions: widget.allRtOptions,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabel("No RT *"),
-                        const SizedBox(height: 8),
-                        _buildDropdownRT(),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLabel("No RW"),
-                        const SizedBox(height: 8),
-                        _buildReadOnlyField(_rw),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              _buildLabel("Nama Pemilik Rumah"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _namaController, hint: 'Masukkan nama pemilik...'),
-              const SizedBox(height: 16),
-
-              _buildLabel("Alamat *"),
-              const SizedBox(height: 8),
-              _buildTextField(controller: _alamatController, hint: 'Masukkan alamat...'),
-              const SizedBox(height: 24),
-
-              Divider(color: AppColors.black.light),
-              const SizedBox(height: 16),
-
-              _buildLabel("Detail Lokasi"),
-              const SizedBox(height: 12),
-              _buildReadOnlyField(_kelurahan, label: "Kelurahan"),
-              const SizedBox(height: 12),
-              _buildReadOnlyField(_kecamatan, label: "Kecamatan"),
-              const SizedBox(height: 12),
-              _buildReadOnlyField(_kota, label: "Kota/Kabupaten"),
-              const SizedBox(height: 24),
-
-              Divider(color: AppColors.black.light),
-              const SizedBox(height: 16),
-
-
-              _buildLabel("Status Saat Ini"),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildStatusChip(
-                    "Aktif",
-                    _statusAktif ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
-                    _statusAktif ? AppColors.green.dark : AppColors.red.normal,
-                    _statusAktif ? AppColors.green.light : AppColors.red.light,
-                  ),
-                  const SizedBox(width: 12),
-                   _buildStatusChip(
-                    "Checklist",
-                    _statusChecklist ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
-                    _statusChecklist ? AppColors.green.dark : AppColors.red.normal,
-                    _statusChecklist ? AppColors.green.light : AppColors.red.light,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.red.normal,
-                        foregroundColor: AppColors.white.normal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                      ),
-                      child: const Text(
-                        "BATAL",
-                        style: TextStyle(
-                          fontFamily: 'InstrumentSans',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _onSavePressed, 
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.green.normal,
-                        foregroundColor: AppColors.white.normal,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                      ),
-                      child: const Text(
-                        "SIMPAN",
-                        style: TextStyle(
-                          fontFamily: 'InstrumentSans',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16), 
-            ],
+      child: Scaffold(
+        backgroundColor: AppColors.white.normal,
+        appBar: AppBar(
+          title: const Text(
+            'Edit Detail Rumah',
+            style: TextStyle(
+              fontFamily: 'InstrumentSans',
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          backgroundColor: AppColors.blue.normal,
+          foregroundColor: AppColors.white.normal,
+          elevation: 0,
+          centerTitle: true,
+        ),
+        body: BlocConsumer<EditRumahCubit, EditRumahState>(
+          listener: (context, state) {
+            if (state.status == EditRumahStatus.success) {
+              _showAnimatedDialog(
+                "Berhasil Disimpan!", 
+                "Perubahan detail rumah telah berhasil disimpan."
+              ).then((_) {
+                if (mounted) {
+                  Navigator.pop(context, true); 
+                }
+              });
+            }
+            if (state.status == EditRumahStatus.failure) {
+              _showAnimatedDialog(
+                "Gagal Menyimpan", 
+                state.errorMessage ?? "Terjadi kesalahan.",
+                isSuccess: false,
+              );
+            }
+          },
+          builder: (context, state) {
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel("No RT *"),
+                              const SizedBox(height: 8),
+                              _buildDropdownRT(
+                                context,
+                                state.selectedRT, 
+                                state.rtOptions
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildLabel("No RW"),
+                              const SizedBox(height: 8),
+                              _buildReadOnlyField(_rw),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildLabel("Nama Pemilik Rumah"),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _namaController, 
+                      hint: 'Masukkan nama pemilik...',
+                      onChanged: (value) {
+                        context.read<EditRumahCubit>().namaChanged(value);
+                      }
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildLabel("Alamat *"),
+                    const SizedBox(height: 8),
+                    _buildTextField(
+                      controller: _alamatController, 
+                      hint: 'Masukkan alamat...',
+                      onChanged: (value) {
+                        context.read<EditRumahCubit>().alamatChanged(value);
+                      }
+                    ),
+                    const SizedBox(height: 24),
+
+                    Divider(color: AppColors.black.light),
+                    const SizedBox(height: 16),
+
+                    _buildLabel("Detail Lokasi"),
+                    const SizedBox(height: 12),
+                    _buildReadOnlyField(_kelurahan, label: "Kelurahan"),
+                    const SizedBox(height: 12),
+                    _buildReadOnlyField(_kecamatan, label: "Kecamatan"),
+                    const SizedBox(height: 12),
+                    _buildReadOnlyField(_kota, label: "Kota/Kabupaten"),
+                    const SizedBox(height: 24),
+
+                    Divider(color: AppColors.black.light),
+                    const SizedBox(height: 16),
+
+
+                    _buildLabel("Status Saat Ini"),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        _buildStatusChip(
+                          "Aktif",
+                          _statusAktif ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
+                          _statusAktif ? AppColors.green.dark : AppColors.red.normal,
+                          _statusAktif ? AppColors.green.light : AppColors.red.light,
+                        ),
+                        const SizedBox(width: 12),
+                         _buildStatusChip(
+                          "Checklist",
+                          _statusChecklist ? LucideIcons.checkCircle2 : LucideIcons.xCircle,
+                          _statusChecklist ? AppColors.green.dark : AppColors.red.normal,
+                          _statusChecklist ? AppColors.green.light : AppColors.red.light,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.red.normal,
+                              foregroundColor: AppColors.white.normal,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 7),
+                            ),
+                            child: const Text(
+                              "BATAL",
+                              style: TextStyle(
+                                fontFamily: 'InstrumentSans',
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: state.status == EditRumahStatus.submitting 
+                              ? null 
+                              : () => _onSavePressed(context), 
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.green.normal,
+                              foregroundColor: AppColors.white.normal,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 7),
+                            ),
+                            child: state.status == EditRumahStatus.submitting
+                              ? const SizedBox(
+                                  height: 16, 
+                                  width: 16, 
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                                )
+                              : const Text(
+                                  "SIMPAN",
+                                  style: TextStyle(
+                                    fontFamily: 'InstrumentSans',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16), 
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -280,10 +322,12 @@ class _EditRumahPageState extends State<EditRumahPage> {
     required TextEditingController controller,
     String? hint,
     bool isEnabled = true, 
+    void Function(String)? onChanged, 
   }) {
     return TextField(
       controller: controller,
       enabled: isEnabled,
+      onChanged: onChanged, 
       style: const TextStyle(
         fontFamily: 'InstrumentSans',
         fontSize: 14,
@@ -370,10 +414,10 @@ class _EditRumahPageState extends State<EditRumahPage> {
     );
   }
 
-  Widget _buildDropdownRT() {
+  Widget _buildDropdownRT(BuildContext context, String selectedRT, List<String> rtOptions) {
     return DropdownButtonFormField<String>(
-      value: _selectedRT,
-      items: _rtOptions.map((String value) {
+      value: selectedRT,
+      items: rtOptions.map((String value) {
         return DropdownMenuItem<String>(
           value: value,
           child: Text(value, style: const TextStyle(fontFamily: 'InstrumentSans', fontSize: 14)),
@@ -381,9 +425,7 @@ class _EditRumahPageState extends State<EditRumahPage> {
       }).toList(),
       onChanged: (String? newValue) {
         if (newValue != null) {
-          setState(() {
-            _selectedRT = newValue;
-          });
+          context.read<EditRumahCubit>().rtChanged(newValue);
         }
       },
       decoration: InputDecoration(
@@ -442,5 +484,3 @@ class _EditRumahPageState extends State<EditRumahPage> {
     );
   }
 }
-
-
