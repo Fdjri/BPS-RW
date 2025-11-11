@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lottie/lottie.dart';
 import '../widgets/data_menu_drawer_widget.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
 import '../../../../core/presentation/widgets/custom_bottom_navbar.dart';
@@ -14,14 +15,12 @@ import '../../domain/entities/potensi_rumah.dart';
 class DataPotensiRumahPage extends StatefulWidget {
   const DataPotensiRumahPage({super.key});
   static const String routeName = '/data-potensi';
-
   @override
   State<DataPotensiRumahPage> createState() => _DataPotensiRumahPageState();
 }
 
 class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -45,7 +44,7 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
             return SingleChildScrollView(
               child: Column(
                 children: [
-                  _buildHeaderAndFilters(context, state),
+                  _buildHeaderAndFilters(context, state), 
                   if (state.status == PotensiRumahStatus.loading)
                     const Padding(
                       padding: EdgeInsets.only(top: 150),
@@ -57,17 +56,19 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                       child: Center(child: Text(state.errorMessage ?? 'Gagal memuat data')),
                     ),
                   if (state.status == PotensiRumahStatus.success)
-                    ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: state.filteredDataPotensi.length, 
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        final data = state.filteredDataPotensi[index];
-                        return _buildDataCard(data); 
-                      },
-                    ),
-                    const SizedBox(height: 100), 
+                    state.filteredDataPotensi.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder( 
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          itemCount: state.filteredDataPotensi.length, 
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemBuilder: (context, index) {
+                            final data = state.filteredDataPotensi[index];
+                            return _buildDataCard(data); 
+                          },
+                        ),
+                  const SizedBox(height: 100),
                 ],
               ),
             );
@@ -122,15 +123,15 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                   _buildFilterButton(
                     context, 
                     'Filter Status:', 
-                    state.selectedStatus,
-                    state.statusOptions,
+                    state.selectedStatus, 
+                    state.statusOptions
                   ),
                   const SizedBox(width: 16),
                   _buildFilterButton(
                     context, 
                     'Filter RT:', 
-                    state.selectedRT,
-                    state.rtOptions,
+                    state.selectedRT, 
+                    state.rtOptions
                   ),
                 ],
               ),
@@ -169,7 +170,7 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      value, 
+                      value,
                       style: const TextStyle(
                         fontFamily: 'InstrumentSans',
                         fontSize: 14
@@ -214,7 +215,7 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                 )
               ),
               const SizedBox(height: 16),
-              ConstrainedBox( 
+              ConstrainedBox(
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.4,
                 ),
@@ -223,7 +224,7 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
-                    final isSelected = item == currentValue; 
+                    final isSelected = item == currentValue;
                     return ListTile(
                       title: Text(
                         item,
@@ -231,7 +232,7 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                           fontFamily: 'InstrumentSans',
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           color: isSelected ? AppColors.blue.normal : AppColors.black.normal,
-                        ),
+                        ), 
                       ),
                       trailing: isSelected 
                         ? Icon(LucideIcons.check, color: AppColors.blue.normal) 
@@ -276,21 +277,21 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
             Row(
               children: [
                 _buildTag(
-                  'RT ${data.rt}',
+                  'RT ${data.rt}', 
                   AppColors.blue.light, 
                   icon: LucideIcons.home
                 ),
                 const SizedBox(width: 8),
-                _buildTag('RW ${data.rw}', AppColors.blue.light),
+                _buildTag('RW ${data.rw}', AppColors.blue.light), 
               ],
             ),
             const SizedBox(height: 16),
-            _buildInfoRow(LucideIcons.mapPin, data.alamat, AppColors.blue.normal),
+            _buildInfoRow(LucideIcons.mapPin, data.alamat, AppColors.blue.normal), 
             const SizedBox(height: 4),
             Padding(
               padding: const EdgeInsets.only(left: 32),
               child: Text(
-                data.alamatFull,
+                data.alamatFull, 
                 style: TextStyle(
                   fontFamily: 'InstrumentSans',
                   fontSize: 12, 
@@ -299,7 +300,7 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoRow(LucideIcons.user, data.nama, AppColors.blue.normal),
+            _buildInfoRow(LucideIcons.user, data.nama, AppColors.blue.normal), 
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -320,7 +321,7 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    data.bangunanId,
+                    data.bangunanId, 
                     style: const TextStyle(
                       fontFamily: 'InstrumentSans',
                       fontSize: 16, 
@@ -342,12 +343,19 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
                   )
                 ),
                 const SizedBox(width: 12),
-                _buildStatusChip(
-                  data.statusPotensi ? "Potensi" : "Bukan Potensi", 
-                  data.statusPotensi ? LucideIcons.checkCircle2 : LucideIcons.xCircle, 
-                  data.statusPotensi ? AppColors.green.dark : AppColors.red.normal,
-                  data.statusPotensi ? AppColors.green.light : AppColors.red.light
-                ),
+                data.statusPotensi
+                  ? _buildStatusChip(
+                      "Potensi", 
+                      LucideIcons.checkCircle2, 
+                      AppColors.green.dark,
+                      AppColors.green.light
+                    )
+                  : _buildStatusChip(
+                      "Bukan Potensi", 
+                      LucideIcons.xCircle, 
+                      AppColors.red.normal,
+                      AppColors.red.light
+                    ),
               ],
             )
           ],
@@ -356,7 +364,6 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
     );
   }
 
- 
   Widget _buildTag(String text, Color color, {IconData? icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -405,7 +412,6 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
     );
   }
 
- 
   Widget _buildStatusChip(String label, IconData icon, Color color, Color bgColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -428,6 +434,41 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
             )
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Lottie.asset('assets/lottie/nodata.json', width: 250, height: 250),
+            const SizedBox(height: 16),
+            Text(
+              'Data Tidak Ditemukan',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'InstrumentSans',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.black.normal.withOpacity(0.8),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Data yang Anda cari tidak tersedia saat ini atau filter Anda tidak cocok.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'InstrumentSans',
+                fontSize: 14,
+                color: AppColors.black.normal.withOpacity(0.54),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
