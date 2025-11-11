@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; 
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lottie/lottie.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
 import '../widgets/data_menu_drawer_widget.dart';
 import '../../../../core/presentation/widgets/custom_bottom_navbar.dart';
 import 'package:bps_rw/features/checklist/presentation/pages/checklist_page.dart';
 import 'package:bps_rw/features/laporan/presentation/pages/laporan_page.dart';
 import 'package:bps_rw/features/profile/presentation/pages/profile_page.dart';
+import '../blocs/data_berat_sampah/data_berat_sampah_cubit.dart';
+import '../blocs/data_berat_sampah/data_berat_sampah_state.dart';
+import '../../domain/entities/data_berat_sampah.dart';
 
 
 class DataBeratSampahPage extends StatefulWidget {
@@ -20,74 +25,53 @@ class DataBeratSampahPage extends StatefulWidget {
 class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  String? _selectedBulan = 'Semua Bulan';
-  String? _selectedTahun = '2025';
-  String? _selectedRT = 'Semua RT';
-  final TextEditingController _searchController = TextEditingController();
-
-  final List<Map<String, dynamic>> _dataBeratList = [
-    {
-      "tanggal": "Rabu, 15 Januari 2025",
-      "rt": "001",
-      "mudah_terurai": "12.50",
-      "material_daur": "8.30",
-      "b3": "1.20",
-      "residu": "5.80",
-      "total": "27.80"
-    },
-    {
-      "tanggal": "Selasa, 14 Januari 2025",
-      "rt": "002",
-      "mudah_terurai": "10.00",
-      "material_daur": "5.10",
-      "b3": "0.50",
-      "residu": "3.20",
-      "total": "18.80"
-    },
-    {
-      "tanggal": "Senin, 13 Januari 2025",
-      "rt": "001",
-      "mudah_terurai": "11.20",
-      "material_daur": "7.00",
-      "b3": "0.80",
-      "residu": "4.50",
-      "total": "23.50"
-    },
-  ];
-  final List<String> _listBulan = ['Semua Bulan', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  final List<String> _listTahun = ['2025', '2024', '2023'];
-  final List<String> _listRT = ['Semua RT', '001', '002', '003', '004', '005'];
-
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: AppColors.white.normal,
-      drawer: const DataMenuDrawer(activeRoute: DataBeratSampahPage.routeName), 
-      bottomNavigationBar: CustomBottomNavbar(
-        selectedIndex: 1,
-         onItemTapped: (index) {
-          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (index == 1) {}
-          if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
-          if (index == 3) Navigator.pushReplacementNamed(context, LaporanPage.routeName);
-          if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
-        },
-      ),
-
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeaderAndFilters(),
-            _buildDataList(),
-          ],
+    return BlocProvider(
+      create: (context) => BeratSampahCubit()..fetchDataBeratSampah(),
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: AppColors.white.normal,
+        drawer: const DataMenuDrawer(activeRoute: DataBeratSampahPage.routeName), 
+        bottomNavigationBar: CustomBottomNavbar(
+          selectedIndex: 1,
+           onItemTapped: (index) {
+            if (index == 0) Navigator.pushReplacementNamed(context, '/home');
+            if (index == 1) {}
+            if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
+            if (index == 3) Navigator.pushReplacementNamed(context, LaporanPage.routeName);
+            if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
+          },
+        ),
+        body: BlocBuilder<BeratSampahCubit, BeratSampahState>(
+          builder: (context, state) {
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeaderAndFilters(context, state),
+                  if (state.status == BeratSampahStatus.loading)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 150),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  if (state.status == BeratSampahStatus.failure)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 150),
+                      child: Center(child: Text(state.errorMessage ?? 'Gagal memuat data')),
+                    ),
+                  if (state.status == BeratSampahStatus.success)
+                    _buildDataList(state),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildHeaderAndFilters() {
+  Widget _buildHeaderAndFilters(BuildContext context, BeratSampahState state) {
     return Container(
       padding: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
@@ -130,36 +114,28 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
 
               Row(
                 children: [
-                  _buildFilterButton('Bulan:', _selectedBulan ?? 'Semua Bulan'),
+                  _buildFilterButton(
+                    context, 
+                    'Bulan:', 
+                    state.selectedBulan, 
+                    state.bulanOptions
+                  ),
                   const SizedBox(width: 12),
-                  _buildFilterButton('Tahun:', _selectedTahun ?? '2025'),
+                  _buildFilterButton(
+                    context, 
+                    'Tahun:', 
+                    state.selectedTahun,
+                    state.tahunOptions
+                  ),
                   const SizedBox(width: 12),
-                  _buildFilterButton('RT:', _selectedRT ?? 'Semua RT'),
+                  _buildFilterButton(
+                    context, 
+                    'RT:', 
+                    state.selectedRT,
+                    state.rtOptions
+                  ),
                 ],
               ),
-              // const SizedBox(height: 16),
-              // TextField(
-              //   controller: _searchController,
-              //   style: const TextStyle(
-              //     fontFamily: 'InstrumentSans', 
-              //     fontSize: 14
-              //   ),
-              //   decoration: InputDecoration(
-              //     hintText: 'Cari RT atau tanggal...',
-              //     hintStyle: TextStyle(
-              //       fontFamily: 'InstrumentSans', 
-              //       color: AppColors.black.normal.withOpacity(0.54) 
-              //     ),
-              //     prefixIcon: Icon(LucideIcons.search, color: AppColors.black.normal.withOpacity(0.54)), 
-              //     filled: true,
-              //     fillColor: AppColors.white.normal, 
-              //     contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
-              //     border: OutlineInputBorder(
-              //       borderRadius: BorderRadius.circular(12),
-              //       borderSide: BorderSide.none,
-              //     ),
-              //   ),
-              // ),
             ],
           ),
         ),
@@ -167,7 +143,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
     );
   }
 
-  Widget _buildFilterButton(String title, String value) {
+  Widget _buildFilterButton(BuildContext context, String title, String value, List<String> items) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,15 +163,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
-                List<String> items;
-                if (title == 'Bulan:') {
-                  items = _listBulan;
-                } else if (title == 'Tahun:') {
-                  items = _listTahun;
-                } else {
-                  items = _listRT;
-                }
-                _showFilterSheet(context, title, items);
+                _showFilterSheet(context, title, items, value);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -223,7 +191,8 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
     );
   }
 
-  void _showFilterSheet(BuildContext context, String title, List<String> items) {
+  void _showFilterSheet(BuildContext context, String title, List<String> items, String currentValue) {
+    final cubit = context.read<BeratSampahCubit>();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -258,21 +227,28 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
                   shrinkWrap: true,
                   itemCount: items.length,
                   itemBuilder: (context, index) {
+                    final item = items[index];
+                    final isSelected = item == currentValue;
                     return ListTile(
                       title: Text(
-                        items[index], 
-                        style: const TextStyle(fontFamily: 'InstrumentSans'), 
+                        item, 
+                        style: TextStyle(
+                          fontFamily: 'InstrumentSans',
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? AppColors.blue.normal : AppColors.black.normal,
+                        ), 
                       ),
+                      trailing: isSelected 
+                        ? Icon(LucideIcons.check, color: AppColors.blue.normal) 
+                        : null,
                       onTap: () {
-                        setState(() {
-                          if (title == 'Bulan:') {
-                            _selectedBulan = items[index];
-                          } else if (title == 'Tahun:') {
-                            _selectedTahun = items[index];
-                          } else {
-                            _selectedRT = items[index];
-                          }
-                        });
+                        if (title == 'Bulan:') {
+                          cubit.changeFilter(bulan: item);
+                        } else if (title == 'Tahun:') {
+                          cubit.changeFilter(tahun: item);
+                        } else {
+                          cubit.changeFilter(rt: item);
+                        }
                         Navigator.pop(context);
                       },
                     );
@@ -287,19 +263,24 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
     );
   }
 
-  Widget _buildDataList() {
+  Widget _buildDataList(BeratSampahState state) {
+    if (state.filteredDataBerat.isEmpty) {
+      return _buildEmptyState();
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: _dataBeratList.length,
+      itemCount: state.filteredDataBerat.length, 
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemBuilder: (context, index) {
-        return _buildDataCard(_dataBeratList[index]);
+        final data = state.filteredDataBerat[index]; 
+        return _buildDataCard(data); 
       },
     );
   }
 
-  Widget _buildDataCard(Map<String, dynamic> data) {
+  Widget _buildDataCard(BeratSampah data) {
     return Card(
       elevation: 4, 
       shadowColor: AppColors.black.normal.withOpacity(0.08), 
@@ -317,7 +298,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
                 Icon(LucideIcons.calendarDays, color: AppColors.blue.normal, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  data["tanggal"],
+                  data.displayTanggal,
                   style: const TextStyle(
                     fontFamily: 'InstrumentSans', 
                     fontSize: 14, 
@@ -325,7 +306,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
                   ),
                 ),
                 const Spacer(),
-                _buildRtTag(data["rt"]),
+                _buildRtTag(data.rt),
               ],
             ),
             const SizedBox(height: 16),
@@ -335,7 +316,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
               children: [
                 Expanded(
                   child: _buildWasteBox(
-                    "Mudah Terurai", data["mudah_terurai"], 
+                    "Mudah Terurai", data.mudahTerurai,
                     AppColors.green.light, 
                     AppColors.green.dark,  
                     AppColors.green.dark, 
@@ -345,7 +326,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildWasteBox(
-                    "Material Daur", data["material_daur"], 
+                    "Material Daur", data.materialDaur,
                     AppColors.blue.light,  
                     AppColors.blue.dark,   
                     AppColors.blue.dark,   
@@ -360,7 +341,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
               children: [
                 Expanded(
                   child: _buildWasteBox(
-                    "B3", data["b3"], 
+                    "B3", data.b3,
                     AppColors.red.light,  
                     AppColors.red.normal, 
                     AppColors.red.dark,  
@@ -370,7 +351,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildWasteBox(
-                    "Residu", data["residu"], 
+                    "Residu", data.residu,
                     AppColors.black.light, 
                     AppColors.black.normal.withOpacity(0.7),
                     AppColors.black.normal, 
@@ -408,7 +389,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        data["total"],
+                        data.total.toStringAsFixed(2), 
                         style: TextStyle(
                           fontFamily: 'InstrumentSans', 
                           fontSize: 20, 
@@ -458,8 +439,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
     );
   }
 
-  
-  Widget _buildWasteBox(String title, String weight, Color bgColor, Color titleColor, Color valueColor, Color borderColor) {
+  Widget _buildWasteBox(String title, double weight, Color bgColor, Color titleColor, Color valueColor, Color borderColor) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -485,7 +465,7 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                weight,
+                weight.toStringAsFixed(2), 
                 style: TextStyle(
                   fontFamily: 'InstrumentSans', 
                   fontSize: 20,
@@ -508,6 +488,41 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
             ],
           )
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Lottie.asset('assets/lottie/nodata.json', width: 250, height: 250),
+            const SizedBox(height: 16),
+            Text(
+              'Data Tidak Ditemukan',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'InstrumentSans',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.black.normal.withOpacity(0.8),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Data yang Anda cari tidak tersedia saat ini atau filter Anda tidak cocok.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'InstrumentSans',
+                fontSize: 14,
+                color: AppColors.black.normal.withOpacity(0.54),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
