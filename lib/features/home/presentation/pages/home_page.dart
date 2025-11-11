@@ -19,74 +19,74 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedWasteTypeIndex = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final username = ModalRoute.of(context)?.settings.arguments as String?;
-      if (username != null && mounted) {
-        _showWelcomePopup(context, username);
-      }
-    });
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     final username = ModalRoute.of(context)?.settings.arguments as String?;
+  //     if (username != null && mounted) {
+  //       _showWelcomePopup(context, username);
+  //     }
+  //   });
+  // }
 
-  void _showWelcomePopup(BuildContext context, String username) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, 
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          backgroundColor: AppColors.white.normal,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Lottie.asset(
-                  'assets/lottie/handshake.json',
-                  width: 180,
-                  height: 180,
-                  fit: BoxFit.contain,
-                  onLoaded: (composition) {
-                    Future.delayed(composition.duration, () {
-                      if (Navigator.canPop(dialogContext)) {
-                        Navigator.of(dialogContext).pop();
-                      }
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Selamat Datang!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSans',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 22,
-                    color: AppColors.black.normal,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  username, 
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSans',
-                    fontWeight: FontWeight.w500,
-                    fontSize: 18,
-                    color: AppColors.blue.normal, 
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  // void _showWelcomePopup(BuildContext context, String username) {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false, 
+  //     builder: (BuildContext dialogContext) {
+  //       return Dialog(
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(24),
+  //         ),
+  //         backgroundColor: AppColors.white.normal,
+  //         child: Padding(
+  //           padding: const EdgeInsets.all(24.0),
+  //           child: Column(
+  //             mainAxisSize: MainAxisSize.min,
+  //             children: [
+  //               Lottie.asset(
+  //                 'assets/lottie/handshake.json',
+  //                 width: 180,
+  //                 height: 180,
+  //                 fit: BoxFit.contain,
+  //                 onLoaded: (composition) {
+  //                   Future.delayed(composition.duration, () {
+  //                     if (Navigator.canPop(dialogContext)) {
+  //                       Navigator.of(dialogContext).pop();
+  //                     }
+  //                   });
+  //                 },
+  //               ),
+  //               const SizedBox(height: 16),
+  //               Text(
+  //                 'Selamat Datang!',
+  //                 textAlign: TextAlign.center,
+  //                 style: TextStyle(
+  //                   fontFamily: 'InstrumentSans',
+  //                   fontWeight: FontWeight.w700,
+  //                   fontSize: 22,
+  //                   color: AppColors.black.normal,
+  //                 ),
+  //               ),
+  //               const SizedBox(height: 8),
+  //               Text(
+  //                 username, 
+  //                 textAlign: TextAlign.center,
+  //                 style: TextStyle(
+  //                   fontFamily: 'InstrumentSans',
+  //                   fontWeight: FontWeight.w500,
+  //                   fontSize: 18,
+  //                   color: AppColors.blue.normal, 
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
