@@ -1,52 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart'; 
 import '../../../../core/presentation/utils/app_colors.dart';
 
-class DetailChecklistPage extends StatelessWidget {
+class DetailChecklistPage extends StatefulWidget {
   final Map<String, dynamic> checklistData;
   const DetailChecklistPage({
     super.key,
     required this.checklistData,
   });
-  static final DateFormat _headerDateFormatter = DateFormat('EEEE, d MMMM yyyy', 'id');
-  static final NumberFormat _weightNumberFormatter = NumberFormat('#,##0.00', 'id');
-  final List<Map<String, dynamic>> _detailRumahList = const [
-    {
-      "nama": "Jl. Makaliwe I - (Triyono)",
-      "rt": "002",
-      "sampah": {"Mudah Terurai": true, "Material Daur": false, "B3": false, "Residu": false} 
-    },
-    {
-      "nama": "Jl Gogol no 999 - ()",
-      "rt": "002",
-      "sampah": {"Mudah Terurai": false, "Material Daur": true, "B3": false, "Residu": false}
-    },
-    {
-      "nama": "Jl. Makaliwe II - (Samsul)",
-      "rt": "003",
-      "sampah": {"Mudah Terurai": true, "Material Daur": true, "B3": false, "Residu": false}
-    },
-    {
-      "nama": "Jl. Kenanga no 45 - (Dewi)",
-      "rt": "001",
-      "sampah": {"Mudah Terurai": false, "Material Daur": false, "B3": true, "Residu": false}
-    },
-    {
-      "nama": "Jl. Melati no 12 - (Andi)",
-      "rt": "004",
-      "sampah": {"Mudah Terurai": false, "Material Daur": false, "B3": false, "Residu": true}
-    },
-  ];
+
+  @override
+  State<DetailChecklistPage> createState() => _DetailChecklistPageState();
+}
+
+class _DetailChecklistPageState extends State<DetailChecklistPage> {
+  late DateFormat _headerDateFormatter;
+  late NumberFormat _weightNumberFormatter;
+  late DateTime tanggal;
+  late double totalMudahTerurai;
+  late double totalMaterialDaur;
+  late double totalB3;
+  late double totalResidu;
+  late List<Map<String, dynamic>> detailRumah;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeDateFormatting('id', null);
+    _headerDateFormatter = DateFormat('EEEE, d MMMM yyyy', 'id');
+    _weightNumberFormatter = NumberFormat('#,##0.00', 'id');
+    tanggal = widget.checklistData['tanggal'] ?? DateTime.now();
+    totalMudahTerurai = (widget.checklistData['mudah_terurai'] ?? 0.0).toDouble();
+    totalMaterialDaur = (widget.checklistData['material_daur'] ?? 0.0).toDouble();
+    totalB3 = (widget.checklistData['b3'] ?? 0.0).toDouble();
+    totalResidu = (widget.checklistData['residu'] ?? 0.0).toDouble();
+    detailRumah = List<Map<String, dynamic>>.from(widget.checklistData['detail_rumah'] ?? []);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final DateTime tanggal = checklistData['tanggal'] ?? DateTime.now();
-    final double totalMudahTerurai = (checklistData['mudah_terurai'] ?? 0.0).toDouble();
-    final double totalMaterialDaur = (checklistData['material_daur'] ?? 0.0).toDouble();
-    final double totalB3 = (checklistData['b3'] ?? 0.0).toDouble();
-    final double totalResidu = (checklistData['residu'] ?? 0.0).toDouble();
-    final List<Map<String, dynamic>> detailRumah = List<Map<String, dynamic>>.from(checklistData['detail_rumah'] ?? _detailRumahList);
     return Scaffold(
       backgroundColor: AppColors.white.normal,
       body: SingleChildScrollView(
@@ -292,17 +286,17 @@ class DetailChecklistPage extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _buildReadOnlySampahCheckbox("Mudah Terurai", sampahStatus['Mudah Terurai'] ?? false, AppColors.green.normal, AppColors.green.light)),
+                Expanded(child: _buildReadOnlySampahCheckbox("Mudah Terurai", sampahStatus['mudah_terurai'] ?? false, AppColors.green.normal, AppColors.green.light)),
                 const SizedBox(width: 8),
-                Expanded(child: _buildReadOnlySampahCheckbox("Material Daur", sampahStatus['Material Daur'] ?? false, AppColors.blue.normal, AppColors.blue.light)),
+                Expanded(child: _buildReadOnlySampahCheckbox("Material Daur", sampahStatus['material_daur'] ?? false, AppColors.blue.normal, AppColors.blue.light)),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _buildReadOnlySampahCheckbox("B3", sampahStatus['B3'] ?? false, AppColors.red.normal, AppColors.red.light)),
+                Expanded(child: _buildReadOnlySampahCheckbox("B3", sampahStatus['b3'] ?? false, AppColors.red.normal, AppColors.red.light)),
                 const SizedBox(width: 8),
-                Expanded(child: _buildReadOnlySampahCheckbox("Residu", sampahStatus['Residu'] ?? false, AppColors.black.normal, AppColors.black.light, uncheckedBorderColor: AppColors.black.lightActive)),
+                Expanded(child: _buildReadOnlySampahCheckbox("Residu", sampahStatus['residu'] ?? false, AppColors.black.normal, AppColors.black.light, uncheckedBorderColor: AppColors.black.lightActive)),
               ],
             ),
           ],

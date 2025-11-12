@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart'; 
+import 'package:flutter_bloc/flutter_bloc.dart'; 
 import '../../../../core/presentation/utils/app_colors.dart';
 import '../../../../core/presentation/widgets/custom_bottom_navbar.dart';
 import '../widgets/menu_drawer_widget.dart';
@@ -8,6 +10,8 @@ import 'detail_checklist_page.dart';
 import 'package:bps_rw/features/laporan/presentation/pages/laporan_page.dart';
 import 'package:bps_rw/features/profile/presentation/pages/profile_page.dart';
 import 'package:bps_rw/features/data/presentation/pages/data_page.dart';
+import '../blocs/belum_verif/belum_verif_cubit.dart';
+import '../../domain/entities/belum_verif.dart';
 
 class BelumVerifikasiPage extends StatefulWidget {
   const BelumVerifikasiPage({super.key});
@@ -18,44 +22,25 @@ class BelumVerifikasiPage extends StatefulWidget {
 }
 
 class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
+  
+  @override
+  void initState() {
+    super.initState();
+    initializeDateFormatting('id', null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => UnverifiedChecklistCubit()..fetchData(),
+      child: _BelumVerifBody(),
+    );
+  }
+}
+
+class _BelumVerifBody extends StatelessWidget {
+  _BelumVerifBody();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  String? _selectedBulan = 'Semua Bulan'; 
-  String? _selectedTahun = '2025'; 
-
-  final List<Map<String, dynamic>> _dataBelumVerifikasi = [
-    {
-      "tanggal": DateTime(2025, 10, 9),
-      "mudah_terurai": 0,
-      "material_daur": 0,
-      "b3": 0,
-      "residu": 0,
-    },
-    {
-      "tanggal": DateTime(2025, 10, 9), 
-      "mudah_terurai": 6,
-      "material_daur": 6,
-      "b3": 0,
-      "residu": 1,
-    },
-     {
-      "tanggal": DateTime(2025, 10, 8),
-      "mudah_terurai": 5,
-      "material_daur": 3,
-      "b3": 1,
-      "residu": 2,
-    },
-     {
-      "tanggal": DateTime(2025, 10, 7),
-      "mudah_terurai": 8,
-      "material_daur": 4,
-      "b3": 0,
-      "residu": 3,
-    },
-  ];
-
-  final List<String> _listBulan = ['Semua Bulan', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  final List<String> _listTahun = ['2025', '2024', '2023']; 
   final DateFormat _dateFormatter = DateFormat('EEEE, d MMMM yyyy', 'id');
 
   @override
@@ -74,26 +59,62 @@ class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
           if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
         },
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeaderAndFilters(),
-            ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              itemCount: _dataBelumVerifikasi.length,
-              shrinkWrap: true, 
-              physics: const NeverScrollableScrollPhysics(), 
-              itemBuilder: (context, index) {
-                return _buildVerificationCard(_dataBelumVerifikasi[index]);
-              },
-            ),
-          ],
-        ),
+      body: BlocBuilder<UnverifiedChecklistCubit, UnverifiedChecklistState>(
+        builder: (context, state) {
+          return Stack(
+            children: [
+              SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildHeaderAndFilters(context, state),
+                    _buildListContent(context, state), 
+                  ],
+                ),
+              ),
+              if (state.status == UnverifiedChecklistStatus.loading && state.filteredListData.isNotEmpty)
+                Container(
+                  color: AppColors.white.normal.withOpacity(0.5),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildHeaderAndFilters() {
+  Widget _buildListContent(BuildContext context, UnverifiedChecklistState state) {
+    if (state.status == UnverifiedChecklistStatus.loading && state.filteredListData.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (state.status == UnverifiedChecklistStatus.failure) {
+      return Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Center(child: Text('Gagal memuat data: ${state.errorMessage ?? ''}')),
+      );
+    }
+    if (state.filteredListData.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Center(child: Text('Tidak ada data untuk filter ini')),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      itemCount: state.filteredListData.length,
+      shrinkWrap: true, 
+      physics: const NeverScrollableScrollPhysics(), 
+      itemBuilder: (context, index) {
+        final UnverifiedChecklist data = state.filteredListData[index];
+        return _buildVerificationCard(context, data);
+      },
+    );
+  }
+
+  Widget _buildHeaderAndFilters(BuildContext context, UnverifiedChecklistState state) {
     return Container(
       padding: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
@@ -150,21 +171,21 @@ class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
               Row(
                 children: [
                   Expanded(
-                    child: _buildFilterDropdown(_selectedBulan, _listBulan, () {
-                       _showFilterSheet(context, 'Pilih Bulan', _listBulan, _selectedBulan, (value) {
-                          setState(() => _selectedBulan = value);
-                          // TODO: Logic filter data bulan
-                          print("Bulan Filter changed to: $value");
+                    child: _buildFilterDropdown(state.selectedBulan, state.listBulan, () {
+                       _showFilterSheet(context, 'Pilih Bulan', state.listBulan, state.selectedBulan, (value) {
+                          if (value != null) {
+                            context.read<UnverifiedChecklistCubit>().filterBulanChanged(value);
+                          }
                        });
                     }),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildFilterDropdown(_selectedTahun, _listTahun, () { 
-                       _showFilterSheet(context, 'Pilih Tahun', _listTahun, _selectedTahun, (value) {
-                          setState(() => _selectedTahun = value);
-                           // TODO: Logic filter data tahun
-                          print("Tahun Filter changed to: $value");
+                    child: _buildFilterDropdown(state.selectedTahun, state.listTahun, () { 
+                       _showFilterSheet(context, 'Pilih Tahun', state.listTahun, state.selectedTahun, (value) {
+                          if (value != null) {
+                            context.read<UnverifiedChecklistCubit>().filterTahunChanged(value);
+                          }
                        });
                     }),
                   ),
@@ -273,7 +294,7 @@ class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
     );
   }
 
-  Widget _buildVerificationCard(Map<String, dynamic> data) {
+  Widget _buildVerificationCard(BuildContext context, UnverifiedChecklist data) {
     return Card(
       elevation: 4,
       shadowColor: AppColors.black.normal.withOpacity(0.08),
@@ -305,7 +326,7 @@ class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _dateFormatter.format(data['tanggal']), 
+                      _dateFormatter.format(data.tanggal), 
                       style: const TextStyle(
                         fontFamily: 'InstrumentSans',
                         fontSize: 15, 
@@ -335,17 +356,17 @@ class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(child: _buildWasteCountBox("Mudah Terurai", data['mudah_terurai'] ?? 0, AppColors.green.normal, AppColors.green.light)),
+                Expanded(child: _buildWasteCountBox("Mudah Terurai", data.mudahTerurai, AppColors.green.normal, AppColors.green.light)),
                 const SizedBox(width: 8),
-                Expanded(child: _buildWasteCountBox("Material Daur", data['material_daur'] ?? 0, AppColors.blue.normal, AppColors.blue.light)),
+                Expanded(child: _buildWasteCountBox("Material Daur", data.materialDaur, AppColors.blue.normal, AppColors.blue.light)),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _buildWasteCountBox("B3", data['b3'] ?? 0, AppColors.red.normal, AppColors.red.light)),
+                Expanded(child: _buildWasteCountBox("B3", data.b3, AppColors.red.normal, AppColors.red.light)),
                 const SizedBox(width: 8),
-                Expanded(child: _buildWasteCountBox("Residu", data['residu'] ?? 0, AppColors.black.normal, AppColors.black.light)),
+                Expanded(child: _buildWasteCountBox("Residu", data.residu, AppColors.black.normal, AppColors.black.light)),
               ],
             ),
             const SizedBox(height: 16),
@@ -356,7 +377,7 @@ class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
                    Navigator.push(
                      context,
                      MaterialPageRoute(
-                       builder: (context) => DetailChecklistPage(checklistData: data),
+                       builder: (context) => DetailChecklistPage(checklistData: data.toMap()),
                      ),
                    );
                 },
@@ -426,4 +447,3 @@ class _BelumVerifikasiPageState extends State<BelumVerifikasiPage> {
     );
   }
 }
-

@@ -1,59 +1,26 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:lottie/lottie.dart'; 
+import '../../domain/entities/rumah_checklist.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
 
 class ChecklistCardWidget extends StatefulWidget {
-  final Map<String, dynamic> dataRumah;
+  final RumahChecklist dataRumah;
   final Function(String jenisSampah, bool newValue) onSampahChanged;
-  final Function(bool isUploaded) onFotoUploadChanged;
+  final Function() onFotoUploadTapped; 
+
   const ChecklistCardWidget({
     super.key,
     required this.dataRumah,
     required this.onSampahChanged,
-    required this.onFotoUploadChanged,
+    required this.onFotoUploadTapped,
   });
   @override
   State<ChecklistCardWidget> createState() => _ChecklistCardWidgetState();
 }
 
-class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
-    with TickerProviderStateMixin {
+class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
   late Map<String, bool> _sampahStatus;
-  late bool _isFotoUploaded;
-  final ImagePicker _picker = ImagePicker();
-  XFile? _imageFile;
   bool _showUploadButton = false;
-  AnimationController? _lottieSuccessController;
-
-  final List<Map<String, dynamic>> _sampahConfigs = const [
-    {
-      'label': "Mudah Terurai",
-      'initial': "MT",
-      'key': 'mudah_terurai',
-      'color': AppColors.green,
-    },
-    {
-      'label': "B3",
-      'initial': "B3",
-      'key': 'b3',
-      'color': AppColors.red,
-    },
-    {
-      'label': "Material Daur",
-      'initial': "MD",
-      'key': 'material_daur',
-      'color': AppColors.blue,
-    },
-    {
-      'label': "Residu",
-      'initial': "R",
-      'key': 'residu',
-      'color': AppColors.black,
-    },
-  ];
   bool get _isAnySampahChecked {
     return _sampahStatus.values.any((isChecked) => isChecked == true);
   }
@@ -61,425 +28,39 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
   @override
   void initState() {
     super.initState();
-    final sampahData = widget.dataRumah['sampah'];
-    if (sampahData is Map) {
-      _sampahStatus =
-          sampahData.map((key, value) => MapEntry(key, value is bool ? value : false));
-    } else {
-      _sampahStatus = {};
+    _sampahStatus = {
+      'mudah_terurai': widget.dataRumah.sampah['mudah_terurai'] ?? false,
+      'b3': widget.dataRumah.sampah['b3'] ?? false,
+      'material_daur': widget.dataRumah.sampah['material_daur'] ?? false,
+      'residu': widget.dataRumah.sampah['residu'] ?? false,
+    };
+
+    if (_isAnySampahChecked || widget.dataRumah.fotoUploaded) {
+      _showUploadButton = true;
     }
-    for (var config in _sampahConfigs) {
-      _sampahStatus.putIfAbsent(config['key'], () => false);
-    }
-    _sampahStatus.putIfAbsent('r', () => false);
-    _showUploadButton = _isAnySampahChecked;
-    final fotoUploadedData = widget.dataRumah['foto_uploaded'];
-    _isFotoUploaded = fotoUploadedData is bool ? fotoUploadedData : false;
   }
 
-  void _showViewOnlyPreviewDialog(BuildContext context) {
-    if (_imageFile == null) return; 
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          contentPadding: const EdgeInsets.all(12),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12.0),
-                child: Image.file(
-                  File(_imageFile!.path), 
-                  fit: BoxFit.contain,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                child: Text(
-                  'Tutup',
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSans',
-                    color: AppColors.blue.normal,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showSavePreviewDialog(BuildContext context, XFile pickedFile, double fileSizeInKB) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Upload Kegiatan',
-            style: TextStyle(
-                fontFamily: 'InstrumentSans',
-                fontWeight: FontWeight.w600,
-                fontSize: 18),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center, 
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12.0),
-                child: Image.file(
-                  File(pickedFile.path), 
-                  fit: BoxFit.contain,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "${fileSizeInKB.toStringAsFixed(1)} KB",
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: fileSizeInKB > 200 ? AppColors.red.normal : AppColors.green.dark,
-                ),
-                textAlign: TextAlign.center, 
-              ),
-            ],
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: [
-            Wrap(
-              alignment: WrapAlignment.center, 
-              spacing: 8.0, 
-              runSpacing: 8.0,
-              children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.red.normal),
-                    foregroundColor: AppColors.red.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'BATAL',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                  },
-                ),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.blue.normal),
-                    foregroundColor: AppColors.blue.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'GANTI',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    _showImageSourceActionSheet(context);
-                  },
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.green.normal,
-                    foregroundColor: AppColors.white.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'SIMPAN',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    setState(() {
-                      _imageFile = pickedFile;
-                      _isFotoUploaded = true;
-                    });
-                    widget.onFotoUploadChanged(true);
-                    _showConfirmationDialog(context);
-                  },
-                ),
-              ],
-            )
-          ],
-        );
-      },
-    );
-  }
-
-  void _showConfirmationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Lottie.asset('assets/lottie/alert.json', repeat: false),
-              ),
-              Text(
-                'Anda yakin?',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Pastikan data sudah benar!',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 14,
-                  color: AppColors.black.normal.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ElevatedButton( 
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blue.normal,
-                    foregroundColor: AppColors.white.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'SUBMIT',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                    textAlign: TextAlign.center,
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    // TODO: Taruh logika submit data ke API/Database di sini
-                    // Contoh:
-                    // await submitData(_sampahStatus, _imageFile);
-                    _showSuccessDialog(context);
-                  },
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton( 
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.red.normal),
-                    foregroundColor: AppColors.red.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'CANCEL',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
-                    setState(() {
-                      _imageFile = null;
-                      _isFotoUploaded = false;
-                    });
-                    widget.onFotoUploadChanged(false);
-                  },
-                ),
-              ],
-            )
-          ],
-        );
-      },
-    );
-  }
-  
-  void _showSuccessDialog(BuildContext context) {
-    _lottieSuccessController?.dispose(); 
-
-    showDialog(
-      context: context,
-      barrierDismissible: false, 
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Lottie.asset(
-                  'assets/lottie/success.json',
-                  repeat: false,
-                  onLoaded: (composition) {
-                    _lottieSuccessController = AnimationController(
-                      vsync: this, 
-                      duration: composition.duration,
-                    );
-                    _lottieSuccessController!
-                      ..forward().whenComplete(() {
-                        Future.delayed(Duration(milliseconds: 300), () { 
-                          Navigator.of(dialogContext).pop();
-                          if (Navigator.of(this.context).canPop()) {
-                            Navigator.of(this.context).pop(); 
-                          }
-                        });
-                      });
-                  },
-                ),
-              ),
-              Text(
-                'Berhasil!',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Data telah berhasil disubmit.',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 14,
-                  color: AppColors.black.normal.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [],
-        );
-      },
-    );
-  }
-
-
-  void _showImageSourceActionSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.white.normal,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Upload Foto',
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSans',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
-                    color: AppColors.black.normal,
-                  ),
-                ),
-              ),
-              ListTile(
-                leading: Icon(LucideIcons.camera, color: AppColors.blue.normal),
-                title: const Text(
-                  'Ambil Foto (Kamera)',
-                  style: TextStyle(fontFamily: 'InstrumentSans'),
-                ),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _pickImage(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: Icon(LucideIcons.image, color: AppColors.blue.normal),
-                title: const Text(
-                  'Pilih dari Galeri',
-                  style: TextStyle(fontFamily: 'InstrumentSans'),
-                ),
-                onTap: () {
-                  Navigator.of(sheetContext).pop(); 
-                  _pickImage(ImageSource.gallery);
-                },
-              ),
-              if (_isFotoUploaded && _imageFile != null) ...[ 
-                ListTile(
-                  leading: Icon(LucideIcons.eye, color: AppColors.blue.normal),
-                  title: Text(
-                    'Lihat Foto',
-                    style: TextStyle(
-                      fontFamily: 'InstrumentSans',
-                      color: AppColors.blue.normal,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.of(sheetContext).pop(); 
-                    _showViewOnlyPreviewDialog(context);
-                  },
-                ),
-              ],
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        imageQuality: 50, // atur quality image
-        maxWidth: 1000, 
-      );
-
-      if (pickedFile != null && mounted) {
-        final int fileSizeInBytes = await pickedFile.length();
-        final double fileSizeInKB = fileSizeInBytes / 1024;
-        
-        _showSavePreviewDialog(context, pickedFile, fileSizeInKB);
-      } else {
-        print("User cancelled image picking.");
-      }
-    } catch (e) {
-      print("Error picking image: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error mengambil gambar: $e')),
-        );
+  @override
+  void didUpdateWidget(ChecklistCardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.dataRumah != oldWidget.dataRumah) {
+      _sampahStatus = {
+        'mudah_terurai': widget.dataRumah.sampah['mudah_terurai'] ?? false,
+        'b3': widget.dataRumah.sampah['b3'] ?? false,
+        'material_daur': widget.dataRumah.sampah['material_daur'] ?? false,
+        'residu': widget.dataRumah.sampah['residu'] ?? false,
+      };
+      if (_isAnySampahChecked || widget.dataRumah.fotoUploaded) {
+        setState(() {
+          _showUploadButton = true;
+        });
       }
     }
   }
 
   Widget _buildSampahCheckbox(
     String initial,
-    String key,
+    String key, 
     Color normalColor,
     Color lightColor,
   ) {
@@ -488,6 +69,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
     Color borderColor = isChecked ? normalColor : const Color(0xFFD1D5DB);
     Color contentColor =
         isChecked ? normalColor : AppColors.black.normal.withOpacity(0.8);
+    final String cubitKey = key;
     return Flexible(
       child: AspectRatio(
         aspectRatio: 2.2,
@@ -501,14 +83,14 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
           child: InkWell(
             onTap: () {
               setState(() {
-                bool isCurrentlyChecked = _sampahStatus[key] ?? false;
-                bool newCheckedState = !isCurrentlyChecked;
+                bool newCheckedState = !isChecked;
                 _sampahStatus[key] = newCheckedState;
-                if (!_showUploadButton && newCheckedState == true) {
+
+                if (newCheckedState == true && _showUploadButton == false) {
                   _showUploadButton = true;
                 }
               });
-              widget.onSampahChanged(key, _sampahStatus[key]!);
+              widget.onSampahChanged(cubitKey, _sampahStatus[key]!);
             },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -558,12 +140,13 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
   }
 
   Widget _buildUploadButton() {
-    bool isUploaded = _isFotoUploaded;
+    bool isUploaded = widget.dataRumah.fotoUploaded;
     Color bgColor = isUploaded ? AppColors.green.light : AppColors.white.normal;
     Color contentColor =
         isUploaded ? AppColors.green.dark : AppColors.blue.normal;
     IconData icon = isUploaded ? LucideIcons.checkCircle : LucideIcons.upload;
     String label = isUploaded ? "Foto Terupload" : "Upload Foto";
+    
     return Material(
       color: bgColor,
       shape: RoundedRectangleBorder(
@@ -572,9 +155,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {
-          _showImageSourceActionSheet(context);
-        },
+        onTap: widget.onFotoUploadTapped,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
@@ -622,7 +203,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.dataRumah['nama'] ?? 'Nama Tidak Ada',
+                        widget.dataRumah.nama, 
                         style: const TextStyle(
                           fontFamily: 'InstrumentSans',
                           fontSize: 16,
@@ -631,7 +212,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        widget.dataRumah['alamat'] ?? 'Alamat Tidak Ada',
+                        widget.dataRumah.alamat, 
                         style: TextStyle(
                           fontFamily: 'InstrumentSans',
                           fontSize: 13,
@@ -649,7 +230,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    "RT ${widget.dataRumah['rt'] ?? '??'}",
+                    "RT ${widget.dataRumah.rt}", 
                     style: TextStyle(
                       fontFamily: 'InstrumentSans',
                       color: AppColors.blue.dark,
@@ -687,7 +268,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
                 const SizedBox(width: 8),
                 _buildSampahCheckbox(
                   "R",
-                  'r', 
+                  'residu', 
                   AppColors.black.normal,
                   AppColors.black.light,
                 ),
@@ -701,11 +282,5 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget>
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _lottieSuccessController?.dispose();
-    super.dispose();
   }
 }
