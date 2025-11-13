@@ -6,7 +6,7 @@ import '../../../../core/presentation/utils/app_colors.dart';
 class ChecklistCardWidget extends StatefulWidget {
   final RumahChecklist dataRumah;
   final Function(String jenisSampah, bool newValue) onSampahChanged;
-  final Function() onFotoUploadTapped; 
+  final Function(bool isUploaded) onFotoUploadTapped; 
 
   const ChecklistCardWidget({
     super.key,
@@ -34,7 +34,6 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
       'material_daur': widget.dataRumah.sampah['material_daur'] ?? false,
       'residu': widget.dataRumah.sampah['residu'] ?? false,
     };
-
     if (_isAnySampahChecked || widget.dataRumah.fotoUploaded) {
       _showUploadButton = true;
     }
@@ -69,7 +68,9 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
     Color borderColor = isChecked ? normalColor : const Color(0xFFD1D5DB);
     Color contentColor =
         isChecked ? normalColor : AppColors.black.normal.withOpacity(0.8);
+    
     final String cubitKey = key;
+
     return Flexible(
       child: AspectRatio(
         aspectRatio: 2.2,
@@ -85,7 +86,6 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
               setState(() {
                 bool newCheckedState = !isChecked;
                 _sampahStatus[key] = newCheckedState;
-
                 if (newCheckedState == true && _showUploadButton == false) {
                   _showUploadButton = true;
                 }
@@ -155,7 +155,9 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: widget.onFotoUploadTapped,
+        onTap: () {
+          widget.onFotoUploadTapped(isUploaded);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
@@ -247,21 +249,21 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
               children: [
                 _buildSampahCheckbox(
                   "MT",
-                  'mudah_terurai',
+                  'mudah_terurai', 
                   AppColors.green.normal,
                   AppColors.green.light,
                 ),
                 const SizedBox(width: 8),
                 _buildSampahCheckbox(
                   "B3",
-                  'b3',
+                  'b3', 
                   AppColors.red.normal,
                   AppColors.red.light,
                 ),
                 const SizedBox(width: 8),
                 _buildSampahCheckbox(
                   "MD",
-                  'material_daur',
+                  'material_daur', 
                   AppColors.blue.normal,
                   AppColors.blue.light,
                 ),

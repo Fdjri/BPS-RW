@@ -30,6 +30,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
   final ImagePicker _picker = ImagePicker();
   AnimationController? _lottieSuccessController;
   AnimationController? _lottieSuccessTotalController;
+  final Map<String, File> _uploadedImageFiles = {};
 
   @override
   void initState() {
@@ -37,9 +38,98 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     initializeDateFormatting('id', null);
   }
 
+  Future<void> _showViewOnlyPreviewDialog(BuildContext context, String rumahId) {
+    final File? imageFile = _uploadedImageFiles[rumahId];
+
+    if (imageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: File foto tidak ditemukan.')),
+      );
+      return Future.value();
+    }
+
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Lihat Gambar',
+            style: TextStyle(
+                fontFamily: 'InstrumentSans',
+                fontWeight: FontWeight.w600,
+                fontSize: 18),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center, 
+            children: [
+              InkWell(
+                onTap: () {
+                  Navigator.of(dialogContext).pop();
+                  _showFullscreenImageDialog(context, imageFile);
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: Image.file(
+                    imageFile, 
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [
+            Wrap(
+              alignment: WrapAlignment.center, 
+              spacing: 8.0, 
+              runSpacing: 8.0,
+              children: [
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.red.normal.withOpacity(0.5)),
+                    foregroundColor: AppColors.red.normal,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'BATAL',
+                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(); 
+                  },
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.blue.normal,
+                    foregroundColor: AppColors.white.normal,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'UBAH',
+                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop(); 
+                    _showImageSourceActionSheet(context, rumahId);
+                  },
+                ),
+              ],
+            )
+          ],
+        );
+      },
+    );
+  }
+
   void _showImageSourceActionSheet(BuildContext context, String rumahId) {
     final cubit = context.read<ChecklistInputCubit>();
-
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.white.normal,
@@ -125,16 +215,17 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
         compressedFile = await File(targetPath).writeAsBytes(resultLagi);
         fileSizeInKB = await compressedFile.length() / 1024;
       }
-
+      
       if (mounted) {
         final bool? isSaved = await _showSavePreviewDialog(context, compressedFile, fileSizeInKB);
-        if (isSaved == true) {
+        if (isSaved == true) { 
           final bool? isConfirmed = await _showConfirmationDialog(context);
           if (isConfirmed == true && context.mounted) {
+            _uploadedImageFiles[rumahId] = compressedFile; 
             cubit.submitFoto(rumahId, compressedFile);
           }
         } else if (isSaved == null) {
-          _pickAndCompressImage(source, context, rumahId, context.read<ChecklistInputCubit>()); 
+          _showImageSourceActionSheet(context, rumahId);
         }
       }
     } catch (e) {
@@ -243,7 +334,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                     style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
                   ),
                   onPressed: () {
-                    Navigator.of(dialogContext).pop(true); 
+                    Navigator.of(dialogContext).pop(true);
                   },
                 ),
               ],
@@ -340,7 +431,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                     ),
                   ),
                   child: Text(
-                    'CANCEL',
+                    'BATAL',
                     style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
                   ),
                   onPressed: () {
@@ -357,7 +448,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                     ),
                   ),
                   child: Text(
-                    'SUBMIT',
+                    'KIRIM',
                     style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
                     textAlign: TextAlign.center,
                   ),
@@ -413,7 +504,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
               ),
               const SizedBox(height: 8),
               Text(
-                'Foto telah berhasil disubmit.',
+                'Foto telah berhasil dikirim.',
                 style: TextStyle(
                   fontFamily: 'InstrumentSans',
                   fontSize: 14,
@@ -508,7 +599,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
               ),
               onPressed: () {
                 Navigator.of(dialogContext)
-                    .pop(null);
+                    .pop(null); 
               },
             ),
             TextButton(
@@ -526,7 +617,6 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                 ),
               ),
               onPressed: () {
-                // Kirim data Map-nya
                 final dataBerat = {
                   'mudah_terurai': _mtController.text,
                   'material_daur': _mdController.text,
@@ -590,7 +680,6 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
   void _showSuccessAnimation(BuildContext context) {
     _lottieSuccessTotalController?.dispose();
     _lottieSuccessTotalController = AnimationController(vsync: this);
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -633,7 +722,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
       },
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final String todayDate =
@@ -662,8 +751,12 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
         body: _ChecklistBody(
           scaffoldKey: _scaffoldKey,
           todayDate: todayDate,
-          onShowImagePicker: (sheetContext, rumahId) {
-            _showImageSourceActionSheet(sheetContext, rumahId);
+          onShowImagePicker: (sheetContext, rumahId, isUploaded) {
+            if (isUploaded) {
+              _showViewOnlyPreviewDialog(sheetContext, rumahId);
+            } else {
+              _showImageSourceActionSheet(sheetContext, rumahId);
+            }
           },
           onShowPhotoSubmitSuccess: () {
             _showPhotoSubmitSuccessDialog(context);
@@ -683,7 +776,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
 class _ChecklistBody extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final String todayDate;
-  final Function(BuildContext context, String rumahId) onShowImagePicker;
+  final Function(BuildContext context, String rumahId, bool isUploaded) onShowImagePicker;
   final Function() onShowPhotoSubmitSuccess;
   final Future<Map<String, String>?> Function() onShowWeightDialog;
   final Function() onShowSuccessAnimation;
@@ -735,7 +828,7 @@ class _ChecklistBody extends StatelessWidget {
                   _buildHeaderAndFilters(context, todayDate),
                   _buildLegend(),
                   _buildListContent(context, state),
-                  _buildSubmitButton(context),
+                  _buildSubmitButton(context), 
                 ],
               ),
             ),
@@ -787,7 +880,6 @@ class _ChecklistBody extends StatelessWidget {
         child: Center(child: Text('Tidak ada data rumah')),
       );
     }
-
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: state.filteredListRumah.length,
@@ -796,7 +888,7 @@ class _ChecklistBody extends StatelessWidget {
       itemBuilder: (context, index) {
         final dataRumah = state.filteredListRumah[index];
         return ChecklistCardWidget(
-          key: ValueKey(dataRumah.id), 
+          key: ValueKey(dataRumah.id),
           dataRumah: dataRumah,
           onSampahChanged: (String jenisSampah, bool isChecked) {
             context.read<ChecklistInputCubit>().updateSampahChecklist(
@@ -805,8 +897,8 @@ class _ChecklistBody extends StatelessWidget {
                   isChecked,
                 );
           },
-          onFotoUploadTapped: () {
-            onShowImagePicker(context, dataRumah.id);
+          onFotoUploadTapped: (bool isUploaded) {
+            onShowImagePicker(context, dataRumah.id, isUploaded);
           },
         );
       },
@@ -865,7 +957,7 @@ class _ChecklistBody extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              _buildFilterSection(context),
+              _buildFilterSection(context), 
             ],
           ),
         ),
