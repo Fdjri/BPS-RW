@@ -875,9 +875,30 @@ class _ChecklistBody extends StatelessWidget {
       );
     }
     if (state.filteredListRumah.isEmpty) {
-       return const Padding(
-        padding: EdgeInsets.all(32.0),
-        child: Center(child: Text('Tidak ada data rumah')),
+       return Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Lottie.asset(
+                'assets/lottie/nodata.json',
+                width: 250,
+                height: 250,
+                repeat: true,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Tidak ada data rumah',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSans',
+                  fontSize: 16,
+                  color: AppColors.black.normal.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return ListView.builder(
@@ -888,7 +909,7 @@ class _ChecklistBody extends StatelessWidget {
       itemBuilder: (context, index) {
         final dataRumah = state.filteredListRumah[index];
         return ChecklistCardWidget(
-          key: ValueKey(dataRumah.id),
+          key: ValueKey(dataRumah.id), 
           dataRumah: dataRumah,
           onSampahChanged: (String jenisSampah, bool isChecked) {
             context.read<ChecklistInputCubit>().updateSampahChecklist(

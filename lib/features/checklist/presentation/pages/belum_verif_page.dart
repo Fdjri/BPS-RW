@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
+import 'package:lottie/lottie.dart';
 import 'package:intl/date_symbol_data_local.dart'; 
 import 'package:flutter_bloc/flutter_bloc.dart'; 
 import '../../../../core/presentation/utils/app_colors.dart';
@@ -97,9 +98,30 @@ class _BelumVerifBody extends StatelessWidget {
       );
     }
     if (state.filteredListData.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(32.0),
-        child: Center(child: Text('Tidak ada data untuk filter ini')),
+      return Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Lottie.asset(
+                'assets/lottie/nodata.json',
+                width: 250,
+                height: 250,
+                repeat: true,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Tidak ada data untuk filter ini',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSans',
+                  fontSize: 16,
+                  color: AppColors.black.normal.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
     return ListView.builder(
