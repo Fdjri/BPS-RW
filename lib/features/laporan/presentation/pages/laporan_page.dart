@@ -1,75 +1,75 @@
+import 'package:bps_rw/features/laporan/presentation/pages/detail_page.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lottie/lottie.dart'; 
+import 'package:flutter_bloc/flutter_bloc.dart'; 
 import 'tambah_laporan_page.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
 import '../../../../core/presentation/widgets/custom_bottom_navbar.dart';
 import 'package:bps_rw/features/checklist/presentation/pages/checklist_page.dart';
 import 'package:bps_rw/features/data/presentation/pages/data_page.dart';
 import 'package:bps_rw/features/profile/presentation/pages/profile_page.dart';
+import '../blocs/laporan/laporan_cubit.dart'; 
+import '../../domain/entities/laporan_entities.dart'; 
 
-class LaporanPage extends StatefulWidget {
+class LaporanPage extends StatelessWidget {
   static const String routeName = '/laporan';
   const LaporanPage({super.key});
-  @override
-  State<LaporanPage> createState() => _LaporanPageState();
-}
-
-class _LaporanPageState extends State<LaporanPage> {
-  String? _selectedBulan = 'Semua Bulan';
-  final List<String> _bulanOptions = [
-    'Semua Bulan', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-  ];
-  
-  String? _selectedTahun = '2025';
-  final List<String> _tahunOptions = ['2025', '2024', '2023', '2022'];
-  final List<Map<String, dynamic>> _laporanList = [
-    {
-      "id": "1",
-      "bulan": "Bulan Mei",
-      "jumlah_rumah": 0,
-      "status": "VERIFIKASI SUDIN",
-    },
-    {
-      "id": "2",
-      "bulan": "Bulan Agustus",
-      "jumlah_rumah": 0,
-      "status": "VERIFIKASI SATPEL",
-    },
-    {
-      "id": "3",
-      "bulan": "Bulan Desember",
-      "jumlah_rumah": 0,
-      "status": "N/A",
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.black.light,
-      bottomNavigationBar: CustomBottomNavbar(
-        selectedIndex: 3,
-        onItemTapped: (index) {
-          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (index == 1) Navigator.pushReplacementNamed(context, DataPage.routeName);
-          if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
-          if (index == 3) {} 
-          if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName); 
-        },
-      ),
-      body: SingleChildScrollView( 
-        child: Column(
-          children: [
-            _buildHeader(context), 
-            _buildBody(context),
-          ],
+    return BlocProvider(
+      create: (context) => LaporanCubit()..fetchLaporan(),
+      child: Scaffold(
+        backgroundColor: AppColors.black.light,
+        bottomNavigationBar: CustomBottomNavbar(
+          selectedIndex: 3,
+          onItemTapped: (index) {
+            if (index == 0) Navigator.pushReplacementNamed(context, '/home');
+            if (index == 1)
+              Navigator.pushReplacementNamed(context, DataPage.routeName);
+            if (index == 2)
+              Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
+            if (index == 3) {}
+            if (index == 4)
+              Navigator.pushReplacementNamed(context, ProfilePage.routeName);
+          },
         ),
+        body: const _LaporanBody(),
       ),
     );
   }
+}
 
-  Widget _buildHeader(BuildContext context) {
+class _LaporanBody extends StatelessWidget {
+  const _LaporanBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<LaporanCubit, LaporanState>(
+      builder: (context, state) {
+        return Stack(
+          children: [
+            SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeader(context, state), 
+                  _buildBody(context, state), 
+                ],
+              ),
+            ),
+            if (state.status == LaporanStatus.loading && state.listLaporan.isNotEmpty)
+              Container(
+                color: Colors.black.withOpacity(0.3),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, LaporanState state) {
     return Container(
       padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16, top: 16),
       decoration: BoxDecoration(
@@ -80,7 +80,7 @@ class _LaporanPageState extends State<LaporanPage> {
         ),
       ),
       child: SafeArea(
-        bottom: false, 
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -106,34 +106,30 @@ class _LaporanPageState extends State<LaporanPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _buildFilterButton( 
-                    value: _selectedBulan ?? 'Pilih Bulan',
+                  child: _buildFilterButton(
+                    value: state.selectedBulan,
                     onTap: () => _showFilterOptions(
                       context,
                       title: "Pilih Bulan",
-                      options: _bulanOptions,
-                      currentValue: _selectedBulan,
+                      options: state.listBulan, 
+                      currentValue: state.selectedBulan,
                       onSelect: (newValue) {
-                        setState(() {
-                          _selectedBulan = newValue;
-                        });
+                        context.read<LaporanCubit>().filterBulanChanged(newValue);
                       },
                     ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildFilterButton( 
-                    value: _selectedTahun ?? 'Pilih Tahun',
+                  child: _buildFilterButton(
+                    value: state.selectedTahun,
                     onTap: () => _showFilterOptions(
                       context,
                       title: "Pilih Tahun",
-                      options: _tahunOptions,
-                      currentValue: _selectedTahun,
+                      options: state.listTahun, 
+                      currentValue: state.selectedTahun,
                       onSelect: (newValue) {
-                        setState(() {
-                          _selectedTahun = newValue;
-                        });
+                        context.read<LaporanCubit>().filterTahunChanged(newValue);
                       },
                     ),
                   ),
@@ -153,14 +149,14 @@ class _LaporanPageState extends State<LaporanPage> {
               ),
               onPressed: () {
                 Navigator.push(
-                     context,
-                     MaterialPageRoute(builder: (context) => const TambahLaporanPage()),
-                 );
+                  context,
+                  MaterialPageRoute(builder: (context) => const TambahLaporanPage()),
+                );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.white.normal, 
-                foregroundColor: AppColors.blue.dark, 
-                minimumSize: const Size(double.infinity, 40), 
+                backgroundColor: AppColors.white.normal,
+                foregroundColor: AppColors.blue.dark,
+                minimumSize: const Size(double.infinity, 40),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
@@ -215,16 +211,11 @@ class _LaporanPageState extends State<LaporanPage> {
     required String? currentValue,
     required Function(String) onSelect,
   }) {
-    final screenHeight = MediaQuery.of(context).size.height;
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Colors.transparent, 
       builder: (context) {
         return Container(
-          constraints: BoxConstraints(
-            maxHeight: screenHeight * 0.7,
-          ),
           decoration: BoxDecoration(
             color: AppColors.white.normal,
             borderRadius: const BorderRadius.only(
@@ -235,6 +226,7 @@ class _LaporanPageState extends State<LaporanPage> {
           child: SafeArea(
             top: false, 
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
@@ -249,8 +241,12 @@ class _LaporanPageState extends State<LaporanPage> {
                     ),
                   ),
                 ),
-                Expanded(
+                Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
                   child: ListView.builder(
+                    shrinkWrap: true, 
                     itemCount: options.length,
                     itemBuilder: (context, index) {
                       final item = options[index];
@@ -297,14 +293,25 @@ class _LaporanPageState extends State<LaporanPage> {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
-    if (_laporanList.isEmpty) {
+  Widget _buildBody(BuildContext context, LaporanState state) {
+    if (state.status == LaporanStatus.loading && state.listLaporan.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 64),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (state.filteredLaporanList.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 16),
         alignment: Alignment.center,
         child: Column(
           children: [
-            Icon(LucideIcons.fileX2, size: 64, color: AppColors.black.lightActive),
+            Lottie.asset(
+              'assets/lottie/nodata.json',
+              width: 250,
+              height: 250,
+              repeat: true,
+            ),
             const SizedBox(height: 16),
             Text(
               'Tidak ada data laporan',
@@ -330,21 +337,21 @@ class _LaporanPageState extends State<LaporanPage> {
     }
     
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), 
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       child: ListView.builder(
-        itemCount: _laporanList.length,
-        padding: EdgeInsets.zero, 
-        shrinkWrap: true, 
-        physics: const NeverScrollableScrollPhysics(), 
+        itemCount: state.filteredLaporanList.length,
+        padding: EdgeInsets.zero,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         itemBuilder: (context, index) {
-          final laporan = _laporanList[index];
-          return _buildLaporanCard(context, laporan);
+          final laporan = state.filteredLaporanList[index];
+          return _buildLaporanCard(context, laporan); 
         },
       ),
     );
   }
 
-  Widget _buildLaporanCard(BuildContext context, Map<String, dynamic> laporan) {
+  Widget _buildLaporanCard(BuildContext context, Laporan laporan) {
     return Card(
       elevation: 0,
       color: AppColors.white.normal,
@@ -363,7 +370,7 @@ class _LaporanPageState extends State<LaporanPage> {
                 Icon(LucideIcons.calendarDays, color: AppColors.black.lightActive, size: 20),
                 const SizedBox(width: 12),
                 Text(
-                  laporan['bulan'] ?? 'Nama Bulan',
+                  'Bulan ${laporan.bulan}',
                   style: TextStyle(
                     fontFamily: 'InstrumentSans',
                     fontSize: 16,
@@ -399,7 +406,7 @@ class _LaporanPageState extends State<LaporanPage> {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        (laporan['jumlah_rumah'] ?? 0).toString(),
+                        laporan.jumlahRumah.toString(),
                         style: TextStyle(
                           fontFamily: 'InstrumentSans',
                           fontSize: 28,
@@ -440,15 +447,14 @@ class _LaporanPageState extends State<LaporanPage> {
                     ),
                   ),
                   const Spacer(),
-                  _buildStatusChip(laporan['status'] ?? 'N/A'), 
+                  _buildStatusChip(laporan.status), 
                 ],
               ),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              icon: Icon(LucideIcons.eye, size: 16, color: AppColors.white.normal),
               label: Text(
-                'LIHAT GAMBAR',
+                'DETAIL',
                 style: TextStyle(
                   fontFamily: 'InstrumentSans',
                   fontWeight: FontWeight.bold,
@@ -456,7 +462,12 @@ class _LaporanPageState extends State<LaporanPage> {
                 ),
               ),
               onPressed: () {
-                // TODO: Aksi saat tombol lihat gambar ditekan
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DetailLaporanPage(laporanId: laporan.id),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.blue.normal,
@@ -475,8 +486,22 @@ class _LaporanPageState extends State<LaporanPage> {
   }
 
   Widget _buildStatusChip(String status) {
-    final Color bgColor = AppColors.black.light; 
-    final Color textColor = AppColors.black.dark; 
+    Color bgColor;
+    Color textColor;
+    switch (status.toUpperCase()) {
+      case 'VERIFIKASI SUDIN':
+        bgColor = AppColors.green.light;
+        textColor = AppColors.green.dark;
+        break;
+      case 'VERIFIKASI SATPEL':
+        bgColor = AppColors.blue.light;
+        textColor = AppColors.blue.dark;
+        break;
+      default: 
+        bgColor = AppColors.black.light; 
+        textColor = AppColors.black.dark; 
+    }
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -494,5 +519,4 @@ class _LaporanPageState extends State<LaporanPage> {
       ),
     );
   }
-
 }
