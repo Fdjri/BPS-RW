@@ -1,187 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; 
 import 'package:lottie/lottie.dart';
-import 'package:file_picker/file_picker.dart'; 
+import 'package:file_picker/file_picker.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
-import '../pages/profile_page.dart';
+import '../widgets/profile_shared_widgets.dart';
+import '../../domain/entities/profile_rw.dart';
+import '../blocs/profile_rw/edit_profile_rw_cubit.dart'; 
 
-class EditableProfileData {
-  String namaKetuaRW;
-  String noHPKetuaRW;
-  String jumlahKK;
-  String jumlahRumah;
-  String jumlahRT;
-  String luasRW;
-  String jumlahJiwa;
-  String timbulanSampah;
-  String kotaKabupaten;
-  String kecamatan;
-  String kelurahan;
-  String rw;
-  String noSKRW;
-  String? selectedFileName;
+class EditRWProfilePage extends StatelessWidget {
+  final ProfileRw profileRw;
 
-  EditableProfileData({
-    required this.namaKetuaRW,
-    required this.noHPKetuaRW,
-    required this.jumlahKK,
-    required this.jumlahRumah,
-    required this.jumlahRT,
-    required this.luasRW,
-    required this.jumlahJiwa,
-    required this.timbulanSampah,
-    required this.kotaKabupaten,
-    required this.kecamatan,
-    required this.kelurahan,
-    required this.rw,
-    required this.noSKRW,
-    this.selectedFileName,
+  const EditRWProfilePage({
+    super.key,
+    required this.profileRw,
   });
-
-  factory EditableProfileData.dummy() {
-    return EditableProfileData(
-      namaKetuaRW: 'Sumarkum',
-      noHPKetuaRW: '81280903773',
-      jumlahKK: '812',
-      jumlahRumah: '428',
-      jumlahRT: '15',
-      luasRW: '20,1',
-      jumlahJiwa: '2383',
-      timbulanSampah: '1.811,08',
-      kotaKabupaten: 'KOTA ADM. JAKARTA BARAT',
-      kecamatan: 'Grogol Petamburan',
-      kelurahan: 'Grogol',
-      rw: '7',
-      noSKRW: '123',
-      selectedFileName: null,
-    );
-  }
-}
-
-class EditRWProfilePage extends StatefulWidget {
-  const EditRWProfilePage({super.key});
-
-  @override
-  State<EditRWProfilePage> createState() => _EditRWProfilePageState();
-}
-
-class _EditRWProfilePageState extends State<EditRWProfilePage> {
-  final _formKey = GlobalKey<FormState>();
-  late EditableProfileData _formData;
-  PlatformFile? _pickedFile; 
-
-  @override
-  void initState() {
-    super.initState();
-    _formData = EditableProfileData.dummy();
-  }
-
-  void _showSuccessAnimation() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Lottie.asset(
-                'assets/lottie/success.json',
-                repeat: false,
-                width: 150,
-                height: 150,
-                onLoaded: (composition) {
-                  Future.delayed(composition.duration, () {
-                    Navigator.of(context).pop();
-                    Navigator.of(context).pop();
-                  });
-                },
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Profil Berhasil Disimpan!',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                  color: AppColors.blue.normal,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _pickFile() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'], 
-        allowMultiple: false, 
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        setState(() {
-          _pickedFile = result.files.first; 
-          _formData.selectedFileName =
-              _pickedFile?.name; 
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('File dipilih: ${_pickedFile?.name}')),
-        );
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pemilihan file dibatalkan.')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saat memilih file: $e')),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white.normal,
-      body: CustomScrollView(
-        slivers: [
-          _buildHeader(),
-          SliverList(
-            delegate: SliverChildListDelegate(
-              [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 24.0),
-                        _buildProfileForm(),
-                        const SizedBox(height: 32.0),
-                        _buildActionButtons(),
-                        const SizedBox(height: 80.0),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+    // Kita sediain EditProfileRwCubit di sini
+    return BlocProvider(
+      // Ganti sl<EditProfileRwCubit>() pake Service Locator (GetIt) lo
+      create: (context) => EditProfileRwCubit(),
+      child: Scaffold(
+        backgroundColor: AppColors.white.normal,
+        body: CustomScrollView(
+          slivers: [
+            _buildHeader(context),
+            SliverList(
+              delegate: SliverChildListDelegate(
+                [
+                  // Kirim data profile ke Form Body
+                  _EditRWProfileForm(profileRw: profileRw),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    // ... (Kode _buildHeader lo tetep sama, cuma perlu 'context' buat pop)
     return SliverToBoxAdapter(
       child: Container(
         width: MediaQuery.of(context).size.width,
@@ -237,6 +97,163 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
       ),
     );
   }
+}
+
+class _EditRWProfileForm extends StatefulWidget {
+  final ProfileRw profileRw;
+  const _EditRWProfileForm({required this.profileRw});
+
+  @override
+  State<_EditRWProfileForm> createState() => _EditRWProfileFormState();
+}
+
+class _EditRWProfileFormState extends State<_EditRWProfileForm> {
+  final _formKey = GlobalKey<FormState>();
+  PlatformFile? _pickedFile;
+  String? _selectedFileName;
+
+  late final TextEditingController _namaKetuaRWController;
+  late final TextEditingController _noHPKetuaRWController;
+  late final TextEditingController _jumlahKKController;
+  late final TextEditingController _jumlahRumahController;
+  late final TextEditingController _jumlahRTController;
+  late final TextEditingController _luasRWController;
+  late final TextEditingController _jumlahJiwaController;
+  late final TextEditingController _timbulanSampahController;
+  late final TextEditingController _kotaKabupatenController;
+  late final TextEditingController _kecamatanController;
+  late final TextEditingController _kelurahanController;
+  late final TextEditingController _rwController;
+  late final TextEditingController _noSKRWController;
+
+  @override
+  void initState() {
+    super.initState();
+    final data = widget.profileRw;
+    _namaKetuaRWController = TextEditingController(text: data.namaKetuaRW);
+    _noHPKetuaRWController = TextEditingController(text: data.noHPKetuaRW);
+    _jumlahKKController = TextEditingController(text: data.jumlahKK.toString());
+    _jumlahRumahController = TextEditingController(text: data.jumlahRumah.toString());
+    _jumlahRTController = TextEditingController(text: data.jumlahRT.toString());
+    _luasRWController = TextEditingController(text: data.luasRW.toString().replaceAll('.', ','));
+    _jumlahJiwaController = TextEditingController(text: data.jumlahJiwa.toString());
+    _timbulanSampahController = TextEditingController(text: data.timbulanSampah.toString().replaceAll('.', ','));
+    _kotaKabupatenController = TextEditingController(text: data.kotaKabupaten);
+    _kecamatanController = TextEditingController(text: data.kecamatan);
+    _kelurahanController = TextEditingController(text: data.kelurahan);
+    _rwController = TextEditingController(text: data.rw.toString());
+    _noSKRWController = TextEditingController(text: data.noSKRW);
+    _selectedFileName = data.skFileUrl?.split('/').last; 
+  }
+
+  @override
+  void dispose() {
+    _namaKetuaRWController.dispose();
+    _noHPKetuaRWController.dispose();
+    _jumlahKKController.dispose();
+    _jumlahRumahController.dispose();
+    _jumlahRTController.dispose();
+    _luasRWController.dispose();
+    _jumlahJiwaController.dispose();
+    _timbulanSampahController.dispose();
+    _kotaKabupatenController.dispose();
+    _kecamatanController.dispose();
+    _kelurahanController.dispose();
+    _rwController.dispose();
+    _noSKRWController.dispose();
+    super.dispose();
+  }
+
+  void _showSuccessAnimation() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Lottie.asset(
+                'assets/lottie/success.json',
+                repeat: false,
+                width: 150,
+                height: 150,
+                onLoaded: (composition) {
+                  Future.delayed(composition.duration, () {
+                    Navigator.of(context).pop(); 
+                    Navigator.of(context).pop(); 
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Profil Berhasil Disimpan!',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSans',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  color: AppColors.blue.normal,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'], 
+        allowMultiple: false, 
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _pickedFile = result.files.first; 
+          _selectedFileName = _pickedFile?.name; 
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('File dipilih: ${_pickedFile?.name}')),
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pemilihan file dibatalkan.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saat memilih file: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 24.0),
+            _buildProfileForm(),
+            const SizedBox(height: 32.0),
+            _buildActionButtons(),
+            const SizedBox(height: 80.0),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildProfileForm() {
     return Column(
@@ -245,15 +262,13 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
         buildSectionTitle('Informasi Ketua RW'),
         _buildEditableTextField(
           label: 'Nama Ketua RW',
-          initialValue: _formData.namaKetuaRW,
-          onChanged: (value) => _formData.namaKetuaRW = value,
+          controller: _namaKetuaRWController, 
           validator: (value) =>
               value!.isEmpty ? 'Nama Ketua RW tidak boleh kosong' : null,
         ),
         _buildEditableTextField(
           label: 'Nomor Handphone Ketua RW',
-          initialValue: _formData.noHPKetuaRW,
-          onChanged: (value) => _formData.noHPKetuaRW = value,
+          controller: _noHPKetuaRWController, 
           keyboardType: TextInputType.phone,
           validator: (value) =>
               value!.isEmpty ? 'Nomor HP tidak boleh kosong' : null,
@@ -262,58 +277,47 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
         buildSectionTitle('Data Wilayah'),
         _buildTwoColumnEditableData(
           label1: 'Jumlah KK',
-          initialValue1: _formData.jumlahKK,
-          onChanged1: (value) => _formData.jumlahKK = value,
+          controller1: _jumlahKKController, 
           label2: 'Jumlah Rumah',
-          initialValue2: _formData.jumlahRumah,
-          onChanged2: (value) => _formData.jumlahRumah = value,
+          controller2: _jumlahRumahController, 
           keyboardType: TextInputType.number,
         ),
         _buildTwoColumnEditableData(
           label1: 'Jumlah RT',
-          initialValue1: _formData.jumlahRT,
-          onChanged1: (value) => _formData.jumlahRT = value,
+          controller1: _jumlahRTController, 
           label2: 'Luas RW (m²)',
-          initialValue2: _formData.luasRW,
-          onChanged2: (value) => _formData.luasRW = value,
-          keyboardType: TextInputType.number,
+          controller2: _luasRWController, 
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
         ),
         _buildTwoColumnEditableData(
           label1: 'Jumlah Jiwa',
-          initialValue1: _formData.jumlahJiwa,
-          onChanged1: (value) => _formData.jumlahJiwa = value,
+          controller1: _jumlahJiwaController, 
           label2: 'Timbulan Sampah per Hari (Kg)',
-          initialValue2: _formData.timbulanSampah,
-          onChanged2: (value) => _formData.timbulanSampah = value,
-          keyboardType: TextInputType.number,
+          controller2: _timbulanSampahController, 
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
         ),
         const SizedBox(height: 24.0),
         buildSectionTitle('Alamat Administratif'),
         _buildEditableTextField(
           label: 'Kota/Kabupaten',
-          initialValue: _formData.kotaKabupaten,
-          onChanged: (value) => _formData.kotaKabupaten = value,
+          controller: _kotaKabupatenController, 
         ),
         _buildEditableTextField(
           label: 'Kecamatan',
-          initialValue: _formData.kecamatan,
-          onChanged: (value) => _formData.kecamatan = value,
+          controller: _kecamatanController, 
         ),
         _buildTwoColumnEditableData(
           label1: 'Kelurahan',
-          initialValue1: _formData.kelurahan,
-          onChanged1: (value) => _formData.kelurahan = value,
+          controller1: _kelurahanController, 
           label2: 'RW',
-          initialValue2: _formData.rw,
-          onChanged2: (value) => _formData.rw = value,
+          controller2: _rwController, 
           keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 24.0),
         buildSectionTitle('Dokumen SK RW'),
         _buildEditableTextField(
           label: 'NO SK RW',
-          initialValue: _formData.noSKRW,
-          onChanged: (value) => _formData.noSKRW = value,
+          controller: _noSKRWController, 
         ),
         _buildFileUploadField(),
       ],
@@ -322,8 +326,7 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
 
   Widget _buildEditableTextField({
     required String label,
-    required String initialValue,
-    required Function(String) onChanged,
+    required TextEditingController controller, 
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
@@ -344,8 +347,7 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
         ),
         const SizedBox(height: 4.0),
         TextFormField(
-          initialValue: initialValue,
-          onChanged: onChanged,
+          controller: controller,  
           keyboardType: keyboardType,
           style: TextStyle(
             fontFamily: 'InstrumentSans',
@@ -387,11 +389,9 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
 
   Widget _buildTwoColumnEditableData({
     required String label1,
-    required String initialValue1,
-    required Function(String) onChanged1,
+    required TextEditingController controller1, 
     required String label2,
-    required String initialValue2,
-    required Function(String) onChanged2,
+    required TextEditingController controller2, 
     TextInputType keyboardType = TextInputType.text,
   }) {
     return IntrinsicHeight(
@@ -401,8 +401,7 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
           Expanded(
             child: _buildEditableTextField(
               label: label1,
-              initialValue: initialValue1,
-              onChanged: onChanged1,
+              controller: controller1,
               keyboardType: keyboardType,
             ),
           ),
@@ -410,8 +409,7 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
           Expanded(
             child: _buildEditableTextField(
               label: label2,
-              initialValue: initialValue2,
-              onChanged: onChanged2,
+              controller: controller2,
               keyboardType: keyboardType,
             ),
           ),
@@ -448,15 +446,17 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              _formData.selectedFileName ?? 'No File Chosen', 
+              _selectedFileName ?? 'No File Chosen', 
               style: TextStyle(
                 fontFamily: 'InstrumentSans',
                 fontWeight: FontWeight.w500,
                 fontSize: 16,
-                color: _formData.selectedFileName != null
+                color: _selectedFileName != null
                     ? AppColors.black.darker
                     : AppColors.black.darker.withOpacity(0.6),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
@@ -466,68 +466,105 @@ class _EditRWProfilePageState extends State<EditRWProfilePage> {
   }
 
   Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppColors.blue.normal),
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+    return BlocConsumer<EditProfileRwCubit, EditProfileRwState>(
+      listener: (context, state) {
+        if (state is EditProfileRwSuccess) {
+          _showSuccessAnimation();
+        }
+        if (state is EditProfileRwError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal Menyimpan: ${state.message}'),
+              backgroundColor: AppColors.red.normal,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is EditProfileRwLoading;
+
+        return Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: isLoading ? null : () {
+                  Navigator.of(context).pop();
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.blue.normal),
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'BATAL',
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppColors.blue.normal,
+                  ),
+                ),
               ),
             ),
-            child: Text(
-              'BATAL',
-              style: TextStyle(
-                fontFamily: 'InstrumentSans',
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppColors.blue.normal,
+            const SizedBox(width: 16),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: isLoading ? null : () {
+                  if (_formKey.currentState!.validate()) {
+                    final updatedProfile = widget.profileRw.copyWith(
+                      namaKetuaRW: _namaKetuaRWController.text,
+                      noHPKetuaRW: _noHPKetuaRWController.text,
+                      jumlahKK: int.tryParse(_jumlahKKController.text) ?? 0,
+                      jumlahRumah: int.tryParse(_jumlahRumahController.text) ?? 0,
+                      jumlahRT: int.tryParse(_jumlahRTController.text) ?? 0,
+                      luasRW: double.tryParse(_luasRWController.text.replaceAll(',', '.')) ?? 0.0,
+                      jumlahJiwa: int.tryParse(_jumlahJiwaController.text) ?? 0,
+                      timbulanSampah: double.tryParse(_timbulanSampahController.text.replaceAll('.', '').replaceAll(',', '.')) ?? 0.0,
+                      kotaKabupaten: _kotaKabupatenController.text,
+                      kecamatan: _kecamatanController.text,
+                      kelurahan: _kelurahanController.text,
+                      rw: int.tryParse(_rwController.text) ?? 0,
+                      noSKRW: _noSKRWController.text,
+                    );
+                    context.read<EditProfileRwCubit>().submitProfile(
+                          updatedProfile: updatedProfile,
+                          newSkFile: _pickedFile,
+                        );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.blue.normal,
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 0,
+                ),
+                child: isLoading
+                    ? Container( 
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: AppColors.white.normal,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        'SIMPAN',
+                        style: TextStyle(
+                          fontFamily: 'InstrumentSans',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: AppColors.white.normal,
+                        ),
+                      ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                // TODO: Implement actual save logic (send data to BLoC/Use Case)
-                // Nanti di sini, kita bisa kirim _formData dan _pickedFile
-                // Contoh:
-                // context.read<ProfileBloc>().add(
-                //   UpdateProfileEvent(
-                //     profileData: _formData,
-                //     file: _pickedFile, // <-- Kirim filenya!
-                //   ),
-                // );
-                _showSuccessAnimation();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.blue.normal,
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'SIMPAN',
-              style: TextStyle(
-                fontFamily: 'InstrumentSans',
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: AppColors.white.normal,
-              ),
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

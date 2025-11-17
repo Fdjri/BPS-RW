@@ -1,61 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // <-- Import Bloc
 import '../../../../core/presentation/utils/app_colors.dart';
-import '../pages/profile_page.dart';
+// Import helper yang udah dipisah
+import '../widgets/profile_shared_widgets.dart'; 
+// Import Cubit & State
+import '../blocs/profile_bps/profile_bps_cubit.dart';
+// Import Entity
+import '../../domain/entities/profile_bps.dart';
+import '../../domain/entities/seksi_data.dart';
 
-class SeksiData {
-  final String nama;
-  final String noWA;
-
-  SeksiData({required this.nama, required this.noWA});
-}
-
-class BPSRWProfileData {
-  final SeksiData ketuaBidang;
-  final List<SeksiData> seksiOperasional;
-  final List<SeksiData> seksiSosialisasiPengawasan;
-  final SeksiData pjlpPendamping;
-  final SeksiData supervisorPendamping;
-
-  BPSRWProfileData({
-    required this.ketuaBidang,
-    required this.seksiOperasional,
-    required this.seksiSosialisasiPengawasan,
-    required this.pjlpPendamping,
-    required this.supervisorPendamping,
-  });
-}
-
-final BPSRWProfileData dummyBPSRWData = BPSRWProfileData(
-  ketuaBidang: SeksiData(
-    nama: 'Adhrul Ghulam',
-    noWA: '81311308969',
-  ),
-  seksiOperasional: [
-    SeksiData(nama: 'Jamaluddin', noWA: 'Nomor WA Seksi Operasional 1'),
-    SeksiData(nama: 'Taryana', noWA: 'Nomor WA Seksi Operasional 2'),
-  ],
-  seksiSosialisasiPengawasan: [
-    SeksiData(nama: 'Juwansyah', noWA: 'No WA Seksi Sosialisasi & Pengawasan 1'),
-    SeksiData(nama: 'Roby dahlan', noWA: 'No WA Seksi Sosialisasi & Pengawasan 2'),
-  ],
-  pjlpPendamping: SeksiData(
-    nama: 'Rhafael Pahala',
-    noWA: 'No WA PJLP Pendamping',
-  ),
-  supervisorPendamping: SeksiData(
-    nama: 'Muhamat Sofian',
-    noWA: '87837822398',
-  ),
-);
+// Semua class Model Data dan Dummy Data DIHAPUS DARI SINI
 
 class ProfileBPSRWView extends StatelessWidget {
   const ProfileBPSRWView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final data = dummyBPSRWData;
+    // Kita pake BlocBuilder di sini
+    return BlocBuilder<ProfileBpsCubit, ProfileBpsState>(
+      builder: (context, state) {
+        if (state is ProfileBpsLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (state is ProfileBpsLoaded) {
+          // Kirim data ke method _buildContent
+          return _buildContent(context, state.profileBps);
+        }
+        if (state is ProfileBpsError) {
+          return Center(child: Text('Error: ${state.message}'));
+        }
+        return const Center(child: Text('Profil BPS tidak ditemukan.'));
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context, ProfileBps data) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 80.0), 
+      padding: const EdgeInsets.only(bottom: 80.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -67,7 +48,8 @@ class ProfileBPSRWView extends StatelessWidget {
           ..._buildSeksiList(data.seksiOperasional, 'Seksi Operasional'),
           const SizedBox(height: 24.0),
           buildSectionTitle('Seksi Sosialisasi & Pengawasan'),
-          ..._buildSeksiList(data.seksiSosialisasiPengawasan, 'Seksi Sosialisasi & Pengawasan'),
+          ..._buildSeksiList(
+              data.seksiSosialisasiPengawasan, 'Seksi Sosialisasi & Pengawasan'),
           const SizedBox(height: 24.0),
           buildSectionTitle('Pendamping'),
           _buildPendampingCard(
@@ -115,8 +97,12 @@ class ProfileBPSRWView extends StatelessWidget {
     required String title,
     required SeksiData data,
   }) {
-    final labelName = title.contains('PJLP') ? 'Nama PJLP Pendamping' : 'Nama Supervisor Pendamping';
-    final labelWA = title.contains('PJLP') ? 'No WA PJLP Pendamping' : 'No WA Supervisor Pendamping';
+    final labelName = title.contains('PJLP')
+        ? 'Nama PJLP Pendamping'
+        : 'Nama Supervisor Pendamping';
+    final labelWA = title.contains('PJLP')
+        ? 'No WA PJLP Pendamping'
+        : 'No WA Supervisor Pendamping';
 
     return Container(
       decoration: BoxDecoration(
