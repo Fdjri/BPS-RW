@@ -1,285 +1,241 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../../domain/entities/rumah_checklist.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
 
-class ChecklistCardWidget extends StatefulWidget {
-  final RumahChecklist dataRumah;
-  final Function(String jenisSampah, bool newValue) onSampahChanged;
-  final Function(bool isUploaded) onFotoUploadTapped; 
+class CardWidget extends StatelessWidget {
+  final String nama;
+  final String alamat;
+  final String rt;
+  final Map<String, bool> sampahData;
+  final bool isPhotoUploaded;
+  final Function(String jenisSampah, bool value) onCheckChanged;
+  final VoidCallback onCameraTap;
 
-  const ChecklistCardWidget({
+  const CardWidget({
     super.key,
-    required this.dataRumah,
-    required this.onSampahChanged,
-    required this.onFotoUploadTapped,
+    required this.nama,
+    required this.alamat,
+    required this.rt,
+    required this.sampahData,
+    required this.isPhotoUploaded,
+    required this.onCheckChanged,
+    required this.onCameraTap,
   });
-  @override
-  State<ChecklistCardWidget> createState() => _ChecklistCardWidgetState();
-}
-
-class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
-  late Map<String, bool> _sampahStatus;
-  bool _showUploadButton = false;
-  bool get _isAnySampahChecked {
-    return _sampahStatus.values.any((isChecked) => isChecked == true);
-  }
 
   @override
-  void initState() {
-    super.initState();
-    _sampahStatus = {
-      'mudah_terurai': widget.dataRumah.sampah['mudah_terurai'] ?? false,
-      'b3': widget.dataRumah.sampah['b3'] ?? false,
-      'material_daur': widget.dataRumah.sampah['material_daur'] ?? false,
-      'residu': widget.dataRumah.sampah['residu'] ?? false,
-    };
-    if (_isAnySampahChecked || widget.dataRumah.fotoUploaded) {
-      _showUploadButton = true;
-    }
-  }
+  Widget build(BuildContext context) {
+    // Cek apakah ada sampah yang dicentang buat nentuin tombol kamera muncul/nggak
+    final isAnyChecked = sampahData.containsValue(true);
 
-  @override
-  void didUpdateWidget(ChecklistCardWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.dataRumah != oldWidget.dataRumah) {
-      _sampahStatus = {
-        'mudah_terurai': widget.dataRumah.sampah['mudah_terurai'] ?? false,
-        'b3': widget.dataRumah.sampah['b3'] ?? false,
-        'material_daur': widget.dataRumah.sampah['material_daur'] ?? false,
-        'residu': widget.dataRumah.sampah['residu'] ?? false,
-      };
-      if (_isAnySampahChecked || widget.dataRumah.fotoUploaded) {
-        setState(() {
-          _showUploadButton = true;
-        });
-      }
-    }
-  }
-
-  Widget _buildSampahCheckbox(
-    String initial,
-    String key, 
-    Color normalColor,
-    Color lightColor,
-  ) {
-    bool isChecked = _sampahStatus[key] ?? false;
-    Color boxColor = isChecked ? lightColor : const Color(0xFFF3F4F6);
-    Color borderColor = isChecked ? normalColor : const Color(0xFFD1D5DB);
-    Color contentColor =
-        isChecked ? normalColor : AppColors.black.normal.withOpacity(0.8);
-    
-    final String cubitKey = key;
-
-    return Flexible(
-      child: AspectRatio(
-        aspectRatio: 2.2,
-        child: Material(
-          color: boxColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: borderColor, width: 1.5),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.black.light),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              setState(() {
-                bool newCheckedState = !isChecked;
-                _sampahStatus[key] = newCheckedState;
-                if (newCheckedState == true && _showUploadButton == false) {
-                  _showUploadButton = true;
-                }
-              });
-              widget.onSampahChanged(cubitKey, _sampahStatus[key]!);
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: isChecked ? normalColor : AppColors.white.normal,
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                        color: isChecked ? normalColor : const Color(0xFF9CA3AF),
-                        width: 1.5,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Nama & RT
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.blue.light,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  LucideIcons.home,
+                  color: AppColors.blue.normal,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nama,
+                      style: const TextStyle(
+                        fontFamily: 'InstrumentSans',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
-                    child: isChecked
-                        ? Icon(
-                            LucideIcons.check,
-                            size: 14,
-                            color: AppColors.white.normal,
-                          )
-                        : null,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      initial,
-                      textAlign: TextAlign.start,
+                    const SizedBox(height: 4),
+                    Text(
+                      alamat,
                       style: TextStyle(
                         fontFamily: 'InstrumentSans',
+                        color: Colors.grey[600],
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: contentColor,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUploadButton() {
-    bool isUploaded = widget.dataRumah.fotoUploaded;
-    Color bgColor = isUploaded ? AppColors.green.light : AppColors.white.normal;
-    Color contentColor =
-        isUploaded ? AppColors.green.dark : AppColors.blue.normal;
-    IconData icon = isUploaded ? LucideIcons.checkCircle : LucideIcons.upload;
-    String label = isUploaded ? "Foto Terupload" : "Upload Foto";
-    
-    return Material(
-      color: bgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: contentColor, width: 1),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          widget.onFotoUploadTapped(isUploaded);
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: contentColor, size: 12),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: contentColor,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.green.light,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  "RT $rt",
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    color: AppColors.green.dark,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
+          
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 12),
+
+          // Checkbox Sampah (Grid 2x2 biar rapi)
+          Row(
+            children: [
+              Expanded(
+                child: _buildCheckboxItem(
+                  label: "Mudah Terurai",
+                  code: "MT", 
+                  value: sampahData['MT'] ?? false,
+                  activeColor: AppColors.green.normal,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCheckboxItem(
+                  label: "Daur Ulang",
+                  code: "MD",
+                  value: sampahData['MD'] ?? false,
+                  activeColor: AppColors.blue.normal,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildCheckboxItem(
+                  label: "B3",
+                  code: "B3",
+                  value: sampahData['B3'] ?? false,
+                  activeColor: AppColors.red.normal,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildCheckboxItem(
+                  label: "Residu",
+                  code: "Residu",
+                  value: sampahData['Residu'] ?? false,
+                  activeColor: AppColors.black.normal,
+                ),
+              ),
+            ],
+          ),
+
+          // Tombol Upload Foto (Muncul kalau ada yg dicentang ATAU udah upload)
+          if (isAnyChecked || isPhotoUploaded) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onCameraTap,
+                icon: Icon(
+                  isPhotoUploaded ? LucideIcons.checkCircle : LucideIcons.camera,
+                  size: 18,
+                ),
+                label: Text(
+                  isPhotoUploaded ? "Foto Terupload" : "Ambil Bukti Foto",
+                  style: const TextStyle(fontFamily: 'InstrumentSans'),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isPhotoUploaded 
+                      ? AppColors.green.light 
+                      : AppColors.blue.normal,
+                  foregroundColor: isPhotoUploaded 
+                      ? AppColors.green.dark 
+                      : AppColors.white.normal,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 4,
-      shadowColor: AppColors.black.normal.withOpacity(0.08),
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: AppColors.black.light.withOpacity(0.8), width: 1.0),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildCheckboxItem({
+    required String label,
+    required String code,
+    required bool value,
+    required Color activeColor,
+  }) {
+    return InkWell(
+      onTap: () => onCheckChanged(code, !value),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: value ? activeColor : Colors.grey.shade300,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          color: value ? activeColor.withOpacity(0.1) : Colors.transparent,
+        ),
+        child: Row(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.dataRumah.nama, 
-                        style: const TextStyle(
-                          fontFamily: 'InstrumentSans',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.dataRumah.alamat, 
-                        style: TextStyle(
-                          fontFamily: 'InstrumentSans',
-                          fontSize: 13,
-                          color: AppColors.black.normal.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ),
+            // Custom Checkbox visual
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                color: value ? activeColor : Colors.white,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: value ? activeColor : Colors.grey.shade400,
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.blue.light,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    "RT ${widget.dataRumah.rt}", 
-                    style: TextStyle(
-                      fontFamily: 'InstrumentSans',
-                      color: AppColors.blue.dark,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+              ),
+              child: value
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSampahCheckbox(
-                  "MT",
-                  'mudah_terurai', 
-                  AppColors.green.normal,
-                  AppColors.green.light,
-                ),
-                const SizedBox(width: 8),
-                _buildSampahCheckbox(
-                  "B3",
-                  'b3', 
-                  AppColors.red.normal,
-                  AppColors.red.light,
-                ),
-                const SizedBox(width: 8),
-                _buildSampahCheckbox(
-                  "MD",
-                  'material_daur', 
-                  AppColors.blue.normal,
-                  AppColors.blue.light,
-                ),
-                const SizedBox(width: 8),
-                _buildSampahCheckbox(
-                  "R",
-                  'residu', 
-                  AppColors.black.normal,
-                  AppColors.black.light,
-                ),
-              ],
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'InstrumentSans',
+                fontSize: 12,
+                fontWeight: value ? FontWeight.w600 : FontWeight.normal,
+                color: value ? activeColor : Colors.black87,
+              ),
             ),
-            if (_showUploadButton) ...[
-              const SizedBox(height: 10),
-              _buildUploadButton(),
-            ]
           ],
         ),
       ),
