@@ -22,19 +22,6 @@ class LaporanPage extends StatelessWidget {
       create: (context) => LaporanCubit()..fetchLaporan(),
       child: Scaffold(
         backgroundColor: AppColors.black.light,
-        bottomNavigationBar: CustomBottomNavbar(
-          selectedIndex: 3,
-          onItemTapped: (index) {
-            if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-            if (index == 1)
-              Navigator.pushReplacementNamed(context, DataPage.routeName);
-            if (index == 2)
-              Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
-            if (index == 3) {}
-            if (index == 4)
-              Navigator.pushReplacementNamed(context, ProfilePage.routeName);
-          },
-        ),
         body: const _LaporanBody(),
       ),
     );

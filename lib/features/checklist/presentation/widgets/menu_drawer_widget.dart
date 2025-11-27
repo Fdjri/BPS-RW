@@ -18,114 +18,183 @@ class ChecklistMenuDrawerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? currentRoute = activeRoute ?? ModalRoute.of(context)?.settings.name;
+    // Safe access route name
+    String currentRoute = activeRoute ?? '';
+    if (currentRoute.isEmpty) {
+      try {
+        currentRoute = ModalRoute.of(context)?.settings.name ?? '';
+      } catch (_) {}
+    }
 
     return Drawer(
-      backgroundColor: AppColors.white.light,
-      child: ListView(
-        padding: EdgeInsets.zero,
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(24), 
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-            child: Text(
-              'Menu Checklist',
-              style: TextStyle(
-                fontFamily: 'InstrumentSans',
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.black.normal,
-              ),
+          // --- HEADER ---
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 60, 24, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.blue.light.withOpacity(0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(LucideIcons.clipboardCheck, color: AppColors.blue.normal, size: 24),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Menu Checklist',
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.black.normal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Kelola checklist harian & verifikasi',
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
             ),
           ),
+          
+          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: 16),
 
-          _buildMenuItem(
-            context,
-            icon: LucideIcons.clipboardEdit,
-            text: 'Input Harian',
-            subtitle: 'Masukkan data checklist harian',
-            isSelected: currentRoute == inputHarianRoute,
-            onTap: () {
-              Navigator.pop(context); 
-              if (currentRoute != inputHarianRoute) {
-                Navigator.pushReplacementNamed(context, inputHarianRoute);
-              }
-            },
-          ),
-
-          _buildMenuItem(
-            context,
-            icon: LucideIcons.clock,
-            text: 'Belum di Verifikasi',
-            subtitle: 'Data menunggu verifikasi',
-            isSelected: currentRoute == belumVerifikasiRoute,
-            onTap: () {
-              Navigator.pop(context);
-              if (currentRoute != belumVerifikasiRoute) {
-                 Navigator.pushReplacementNamed(context, belumVerifikasiRoute);
-              }
-            },
-          ),
-
-           _buildMenuItem(
-            context,
-            icon: LucideIcons.checkCircle2, 
-            text: 'Sudah Diverifikasi',
-            subtitle: 'Data telah terverifikasi',
-            isSelected: currentRoute == sudahVerifikasiRoute,
-            onTap: () {
-              Navigator.pop(context);
-              if (currentRoute != sudahVerifikasiRoute) {
-                Navigator.pushReplacementNamed(context, sudahVerifikasiRoute);
-              }
-            },
+          // --- LIST MENU ITEMS ---
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildMenuItem(
+                  context,
+                  icon: LucideIcons.clipboardEdit,
+                  title: 'Input Harian',
+                  subtitle: 'Isi data checklist harian',
+                  isActive: currentRoute == inputHarianRoute,
+                  onTap: () => _navigate(context, inputHarianRoute, currentRoute),
+                ),
+                const SizedBox(height: 4),
+                
+                _buildMenuItem(
+                  context,
+                  icon: LucideIcons.clock,
+                  title: 'Belum Diverifikasi',
+                  subtitle: 'Menunggu verifikasi ketua RW',
+                  isActive: currentRoute == belumVerifikasiRoute,
+                  onTap: () => _navigate(context, belumVerifikasiRoute, currentRoute),
+                ),
+                const SizedBox(height: 4),
+                
+                _buildMenuItem(
+                  context,
+                  icon: LucideIcons.checkCircle2,
+                  title: 'Sudah Diverifikasi',
+                  subtitle: 'Data yang telah disetujui',
+                  isActive: currentRoute == sudahVerifikasiRoute,
+                  onTap: () => _navigate(context, sudahVerifikasiRoute, currentRoute),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  // --- FUNGSI NAVIGASI  ---
+  void _navigate(BuildContext context, String targetRoute, String currentRoute) {
+    // 1. Tutup Drawer
+    Navigator.of(context).pop(); 
+
+    if (targetRoute == currentRoute) {
+      return; 
+    }
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (context.mounted) {
+        // FIX: Gunakan pushNamed (bukan pushReplacementNamed) biar bisa di-back
+        Navigator.of(context, rootNavigator: true).pushNamed(targetRoute);
+      }
+    });
+  }
+
   Widget _buildMenuItem(
     BuildContext context, {
     required IconData icon,
-    required String text,
+    required String title,
     required String subtitle,
-    required bool isSelected,
+    required bool isActive,
     required VoidCallback onTap,
   }) {
-    final Color bgColor = isSelected ? AppColors.blue.normal : Colors.transparent;
-    final Color contentColor = isSelected ? AppColors.white.light : AppColors.blue.dark;
-    final Color subtitleColor = isSelected ? AppColors.white.normal.withOpacity(0.7) : AppColors.black.normal.withOpacity(0.6);
+    final Color titleColor = isActive ? AppColors.white.light : AppColors.black.normal.withOpacity(0.8);
+    final Color subtitleColor = isActive ? AppColors.white.light.withOpacity(0.8) : Colors.grey[500]!;
+    final Color iconColor = isActive ? AppColors.white.light : Colors.grey[400]!;
+    final Color bgColor = isActive ? AppColors.blue.normal : Colors.transparent;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Material(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12), 
-        clipBehavior: Clip.antiAlias, 
-        child: ListTile(
-          leading: Icon(icon, color: contentColor, size: 22), 
-          title: Text(
-            text,
-            style: TextStyle(
-              fontFamily: 'InstrumentSans',
-              color: contentColor,
-              fontWeight: FontWeight.bold 
-            )
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
           ),
-          subtitle: Text(
-            subtitle,
-            style: TextStyle(
-              fontFamily: 'InstrumentSans',
-              color: subtitleColor, 
-              fontSize: 12
-            )
+          child: Row(
+            children: [
+              Icon(icon, size: 22, color: iconColor),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSans',
+                        fontSize: 15,
+                        fontWeight: isActive ? FontWeight.bold : FontWeight.w600,
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSans',
+                        fontSize: 11,
+                        color: subtitleColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          onTap: onTap,
-          dense: true,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         ),
       ),
     );
   }
 }
-

@@ -37,16 +37,6 @@ class _ProfilePageState extends State<ProfilePage> {
     final Size size = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: AppColors.white.normal,
-      bottomNavigationBar: CustomBottomNavbar(
-        selectedIndex: 4,
-        onItemTapped: (index) {
-          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (index == 1) Navigator.pushReplacementNamed(context, DataPage.routeName);
-          if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
-          if (index == 3) Navigator.pushReplacementNamed(context, LaporanPage.routeName);
-          if (index == 4) {}
-        },
-      ),
       body: MultiBlocProvider(
         providers: [
           BlocProvider(

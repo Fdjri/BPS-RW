@@ -29,16 +29,6 @@ class _DataPotensiRumahPageState extends State<DataPotensiRumahPage> {
         key: _scaffoldKey,
         backgroundColor: AppColors.white.normal,
         drawer: const DataMenuDrawer(activeRoute: DataPotensiRumahPage.routeName),
-        bottomNavigationBar: CustomBottomNavbar(
-          selectedIndex: 1,
-           onItemTapped: (index) {
-            if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-            if (index == 1) {}
-            if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
-            if (index == 3) Navigator.pushReplacementNamed(context, LaporanPage.routeName);
-            if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
-          },
-        ),
         body: BlocBuilder<PotensiRumahCubit, PotensiRumahState>(
           builder: (context, state) {
             return SingleChildScrollView(

@@ -37,10 +37,6 @@ class _MainPageState extends State<MainPage> {
         index: _currentIndex,
         children: _pages,
       ),
-      bottomNavigationBar: CustomBottomNavbar(
-        selectedIndex: _currentIndex,
-        onItemTapped: _onNavbarTap,
-      ),
     );
   }
 }

@@ -48,21 +48,7 @@ class _SudahVerifBody extends StatelessWidget {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.white.normal,
-      drawer:
-          const ChecklistMenuDrawerWidget(activeRoute: SudahVerifikasiPage.routeName),
-      bottomNavigationBar: CustomBottomNavbar(
-        selectedIndex: 2,
-        onItemTapped: (index) {
-          if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-          if (index == 1)
-            Navigator.pushReplacementNamed(context, DataPage.routeName);
-          if (index == 2) {}
-          if (index == 3)
-            Navigator.pushReplacementNamed(context, LaporanPage.routeName);
-          if (index == 4)
-            Navigator.pushReplacementNamed(context, ProfilePage.routeName);
-        },
-      ),
+       drawer: const ChecklistMenuDrawerWidget(activeRoute: SudahVerifikasiPage.routeName),
       body: BlocBuilder<VerifiedChecklistCubit, VerifiedChecklistState>(
         builder: (context, state) {
           return Stack(

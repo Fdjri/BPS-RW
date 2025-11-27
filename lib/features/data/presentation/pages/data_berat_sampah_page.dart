@@ -16,7 +16,8 @@ import '../../domain/entities/data_berat_sampah.dart';
 class DataBeratSampahPage extends StatefulWidget {
   const DataBeratSampahPage({super.key});
 
-  static const String routeName = DataMenuDrawer.sampahRoute;
+  // Pastikan ini sama dengan yang dipanggil di drawer & main.dart
+  static const String routeName = '/data-sampah'; 
 
   @override
   State<DataBeratSampahPage> createState() => _DataBeratSampahPageState();
@@ -33,16 +34,6 @@ class _DataBeratSampahPageState extends State<DataBeratSampahPage> {
         key: _scaffoldKey,
         backgroundColor: AppColors.white.normal,
         drawer: const DataMenuDrawer(activeRoute: DataBeratSampahPage.routeName), 
-        bottomNavigationBar: CustomBottomNavbar(
-          selectedIndex: 1,
-           onItemTapped: (index) {
-            if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-            if (index == 1) {}
-            if (index == 2) Navigator.pushReplacementNamed(context, ChecklistPage.routeName);
-            if (index == 3) Navigator.pushReplacementNamed(context, LaporanPage.routeName);
-            if (index == 4) Navigator.pushReplacementNamed(context, ProfilePage.routeName);
-          },
-        ),
         body: BlocBuilder<BeratSampahCubit, BeratSampahState>(
           builder: (context, state) {
             return SingleChildScrollView(

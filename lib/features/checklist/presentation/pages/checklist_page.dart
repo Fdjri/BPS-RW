@@ -6,15 +6,12 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:lottie/lottie.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart'; 
-import 'package:flutter_image_compress/flutter_image_compress.dart'; 
+import 'package:image_picker/image_picker.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import '../../../../injection_container.dart' as di;
 import '../../../../core/presentation/utils/app_colors.dart';
-import '../../../../core/presentation/widgets/custom_bottom_navbar.dart';
 import '../widgets/menu_drawer_widget.dart';
-import '../widgets/card_widget.dart'; 
-import 'package:bps_rw/features/laporan/presentation/pages/laporan_page.dart';
-import 'package:bps_rw/features/profile/presentation/pages/profile_page.dart';
-import 'package:bps_rw/features/data/presentation/pages/data_page.dart';
+import '../widgets/card_widget.dart';
 import '../blocs/checklist/checklist_input_cubit.dart';
 
 class ChecklistPage extends StatefulWidget {
@@ -25,11 +22,14 @@ class ChecklistPage extends StatefulWidget {
   State<ChecklistPage> createState() => _ChecklistPageState();
 }
 
-class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateMixin { 
-  
+class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateMixin {
   final ImagePicker _picker = ImagePicker();
+  
+  // Animation Controllers
   AnimationController? _lottieSuccessController;
   AnimationController? _lottieSuccessTotalController;
+  
+  // Local State untuk file gambar sementara
   final Map<String, File> _uploadedImageFiles = {};
 
   @override
@@ -37,95 +37,186 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     super.initState();
     initializeDateFormatting('id', null);
   }
+  
+  @override
+  void dispose() {
+    _lottieSuccessController?.dispose();
+    _lottieSuccessTotalController?.dispose();
+    super.dispose();
+  }
 
-  Future<void> _showViewOnlyPreviewDialog(BuildContext context, String rumahId) {
-    final File? imageFile = _uploadedImageFiles[rumahId];
-
-    if (imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: File foto tidak ditemukan.')),
-      );
-      return Future.value();
-    }
-
-    return showDialog<void>(
+  // ==========================================================================
+  // 1. LOGIC FILTER SHEET (FIXED: Terima Cubit sebagai Parameter)
+  // ==========================================================================
+  void _showFilterSheet(BuildContext context, ChecklistInputCubit cubit, List<String> listRT, String currentRT) {
+    showModalBottomSheet(
       context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Lihat Gambar',
-            style: TextStyle(
-                fontFamily: 'InstrumentSans',
-                fontWeight: FontWeight.w600,
-                fontSize: 18),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6, 
           ),
-          content: Column(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center, 
             children: [
-              InkWell(
-                onTap: () {
-                  Navigator.of(dialogContext).pop();
-                  _showFullscreenImageDialog(context, imageFile);
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12.0),
-                  child: Image.file(
-                    imageFile, 
-                    fit: BoxFit.contain,
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Pilih Wilayah RT',
+                      style: TextStyle(
+                        fontFamily: 'InstrumentSans',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.black,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(LucideIcons.x, color: Colors.black, size: 20),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+
+              // List RT Options
+              Flexible(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  shrinkWrap: true,
+                  itemCount: listRT.length,
+                  itemBuilder: (context, index) {
+                    // FIX: Handle potential null values safely
+                    final String? rawRT = listRT[index];
+                    final String rt = rawRT ?? "Unknown"; 
+                    
+                    final bool isSelected = rt == currentRT;
+                    
+                    return InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        cubit.filterRtChanged(rt);
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        color: isSelected ? AppColors.blue.light.withOpacity(0.1) : Colors.transparent,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              rt == 'Semua RT' ? 'Tampilkan Semua RT' : 'RT $rt',
+                              style: TextStyle(
+                                fontFamily: 'InstrumentSans',
+                                fontSize: 16,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected ? AppColors.blue.normal : Colors.black87,
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(LucideIcons.check, color: AppColors.blue.normal, size: 20),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: [
-            Wrap(
-              alignment: WrapAlignment.center, 
-              spacing: 8.0, 
-              runSpacing: 8.0,
-              children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.red.normal.withOpacity(0.5)),
-                    foregroundColor: AppColors.red.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'BATAL',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(); 
-                  },
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blue.normal,
-                    foregroundColor: AppColors.white.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'UBAH',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(); 
-                    _showImageSourceActionSheet(context, rumahId);
-                  },
-                ),
-              ],
-            )
-          ],
         );
       },
     );
+  }
+
+  // ==========================================================================
+  // 2. LOGIC IMAGE PICKER & COMPRESS
+  // ==========================================================================
+  Future<void> _pickAndCompressImage(ImageSource source, BuildContext context, String rumahId, ChecklistInputCubit cubit) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 70, 
+        maxWidth: 1000, 
+      );
+      if (pickedFile == null) return;
+      
+      final fileBytes = await pickedFile.readAsBytes();
+      var result = await FlutterImageCompress.compressWithList(
+        fileBytes,
+        minHeight: 800,
+        minWidth: 800,
+        quality: 70,
+      );
+      
+      final tempDir = Directory.systemTemp;
+      final targetPath = '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      File compressedFile = await File(targetPath).writeAsBytes(result);
+      
+      double fileSizeInKB = await compressedFile.length() / 1024;
+      
+      if (fileSizeInKB > 200) {
+        result = await FlutterImageCompress.compressWithList(
+          result,
+          minHeight: 600,
+          minWidth: 600,
+          quality: 50, 
+        );
+        compressedFile = await File(targetPath).writeAsBytes(result);
+        fileSizeInKB = await compressedFile.length() / 1024;
+      }
+      
+      if (mounted) {
+        final bool? isSaved = await _showSavePreviewDialog(context, compressedFile, fileSizeInKB);
+        
+        if (isSaved == true) { 
+          if (!context.mounted) return;
+          final bool? isConfirmed = await _showConfirmationDialog(context);
+          
+          if (isConfirmed == true && context.mounted) {
+            setState(() {
+              _uploadedImageFiles[rumahId] = compressedFile; 
+            });
+            cubit.submitFoto(rumahId, compressedFile);
+          }
+        } else if (isSaved == null && context.mounted) {
+          _showImageSourceActionSheet(context, rumahId);
+        }
+      }
+    } catch (e) {
+      debugPrint("Error picking image: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error mengambil gambar: $e')),
+        );
+      }
+    }
   }
 
   void _showImageSourceActionSheet(BuildContext context, String rumahId) {
@@ -134,10 +225,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
       context: context,
       backgroundColor: AppColors.white.normal,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
       ),
       builder: (BuildContext sheetContext) {
         return SafeArea(
@@ -146,22 +234,11 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
             children: <Widget>[
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Upload Foto',
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSans',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
-                    color: AppColors.black.normal,
-                  ),
-                ),
+                child: Text('Upload Foto', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w600, fontSize: 18, color: AppColors.black.normal)),
               ),
               ListTile(
                 leading: Icon(LucideIcons.camera, color: AppColors.blue.normal),
-                title: const Text(
-                  'Ambil Foto (Kamera)',
-                  style: TextStyle(fontFamily: 'InstrumentSans'),
-                ),
+                title: const Text('Ambil Foto (Kamera)', style: TextStyle(fontFamily: 'InstrumentSans')),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   _pickAndCompressImage(ImageSource.camera, context, rumahId, cubit);
@@ -169,10 +246,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
               ),
               ListTile(
                 leading: Icon(LucideIcons.image, color: AppColors.blue.normal),
-                title: const Text(
-                  'Pilih dari Galeri',
-                  style: TextStyle(fontFamily: 'InstrumentSans'),
-                ),
+                title: const Text('Pilih dari Galeri', style: TextStyle(fontFamily: 'InstrumentSans')),
                 onTap: () {
                   Navigator.of(sheetContext).pop(); 
                   _pickAndCompressImage(ImageSource.gallery, context, rumahId, cubit);
@@ -186,58 +260,68 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     );
   }
 
-  Future<void> _pickAndCompressImage(ImageSource source, BuildContext context, String rumahId, ChecklistInputCubit cubit) async {
-    try {
-      final XFile? pickedFile = await _picker.pickImage(
-        source: source,
-        imageQuality: 70, 
-        maxWidth: 1000, 
-      );
-      if (pickedFile == null) return;
-      final fileBytes = await pickedFile.readAsBytes();
-      final result = await FlutterImageCompress.compressWithList(
-        fileBytes,
-        minHeight: 800,
-        minWidth: 800,
-        quality: 70,
-      );
-      final tempDir = Directory.systemTemp;
-      final targetPath = '${tempDir.path}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      File compressedFile = await File(targetPath).writeAsBytes(result);
-      double fileSizeInKB = await compressedFile.length() / 1024;
-      if (fileSizeInKB > 200) {
-        final resultLagi = await FlutterImageCompress.compressWithList(
-          result,
-          minHeight: 600,
-          minWidth: 600,
-          quality: 50, 
-        );
-        compressedFile = await File(targetPath).writeAsBytes(resultLagi);
-        fileSizeInKB = await compressedFile.length() / 1024;
-      }
-      
-      if (mounted) {
-        final bool? isSaved = await _showSavePreviewDialog(context, compressedFile, fileSizeInKB);
-        if (isSaved == true) { 
-          final bool? isConfirmed = await _showConfirmationDialog(context);
-          if (isConfirmed == true && context.mounted) {
-            _uploadedImageFiles[rumahId] = compressedFile; 
-            cubit.submitFoto(rumahId, compressedFile);
-          }
-        } else if (isSaved == null) {
-          _showImageSourceActionSheet(context, rumahId);
-        }
-      }
-    } catch (e) {
-      print("Error picking image: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error mengambil gambar: $e')),
-        );
-      }
+  // ==========================================================================
+  // 3. DIALOGS (Preview, Confirm, Success, Input Weight)
+  // ==========================================================================
+
+  Future<void> _showViewOnlyPreviewDialog(BuildContext context, String rumahId) {
+    final File? imageFile = _uploadedImageFiles[rumahId];
+    if (imageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: File foto tidak ditemukan.')));
+      return Future.value();
     }
+
+    return showDialog<void>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Lihat Gambar', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w600, fontSize: 18)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              InkWell(
+                onTap: () {
+                  Navigator.of(dialogContext).pop();
+                  _showFullscreenImageDialog(context, imageFile);
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: Image.file(imageFile, fit: BoxFit.contain, height: 250),
+                ),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.red.normal.withOpacity(0.5)),
+                foregroundColor: AppColors.red.normal,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('BATAL', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700)),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.blue.normal,
+                foregroundColor: AppColors.white.normal,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('UBAH', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); 
+                _showImageSourceActionSheet(context, rumahId);
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
-  
+
   Future<bool?> _showSavePreviewDialog(BuildContext context, File compressedFile, double fileSizeInKB) {
     return showDialog<bool?>(
       context: context,
@@ -245,46 +329,27 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'Upload Kegiatan',
-            style: TextStyle(
-                fontFamily: 'InstrumentSans',
-                fontWeight: FontWeight.w600,
-                fontSize: 18),
-          ),
+          title: const Text('Upload Kegiatan', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w600, fontSize: 18)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center, 
             children: [
               InkWell(
-                onTap: () {
-                  _showFullscreenImageDialog(context, compressedFile);
-                },
+                onTap: () => _showFullscreenImageDialog(context, compressedFile),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12.0),
-                  child: Image.file(
-                    compressedFile, 
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.file(compressedFile, fit: BoxFit.contain, height: 250),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 "${fileSizeInKB.toStringAsFixed(1)} KB",
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: fileSizeInKB > 200 ? AppColors.red.normal : AppColors.green.dark,
-                ),
-                textAlign: TextAlign.center, 
+                style: TextStyle(fontFamily: 'InstrumentSans', fontSize: 12, fontWeight: FontWeight.bold, color: fileSizeInKB > 200 ? AppColors.red.normal : AppColors.green.dark),
               ),
             ],
           ),
           actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
-            Wrap(
+             Wrap(
               alignment: WrapAlignment.center, 
               spacing: 8.0, 
               runSpacing: 8.0,
@@ -293,49 +358,28 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: AppColors.red.normal),
                     foregroundColor: AppColors.red.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: Text(
-                    'BATAL',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(false); 
-                  },
+                  child: const Text('BATAL', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700)),
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
                 ),
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: AppColors.blue.normal),
                     foregroundColor: AppColors.blue.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: Text(
-                    'GANTI',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(null); 
-                  },
+                  child: const Text('GANTI', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700)),
+                  onPressed: () => Navigator.of(dialogContext).pop(null),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.green.normal,
                     foregroundColor: AppColors.white.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: Text(
-                    'SIMPAN',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(true);
-                  },
+                  child: const Text('SIMPAN', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700)),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
                 ),
               ],
             )
@@ -351,29 +395,18 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
       builder: (BuildContext dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.all(10),
+          insetPadding: const EdgeInsets.all(10),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              InteractiveViewer(
-                child: Image.file(imageFile),
+              Expanded(
+                child: InteractiveViewer(child: Image.file(imageFile)),
               ),
               const SizedBox(height: 12),
               TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.8)
-                ),
-                child: Text(
-                  'Tutup',
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSans',
-                    color: AppColors.blue.normal,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                },
+                style: TextButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.8)),
+                child: Text('Tutup', style: TextStyle(fontFamily: 'InstrumentSans', color: AppColors.blue.normal, fontWeight: FontWeight.w600)),
+                onPressed: () => Navigator.of(dialogContext).pop(),
               ),
             ],
           ),
@@ -391,70 +424,27 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Lottie.asset('assets/lottie/alert.json', repeat: false),
-              ),
-              Text(
-                'Anda yakin?',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
+              SizedBox(width: 120, height: 120, child: Lottie.asset('assets/lottie/alert.json', repeat: false)),
+              const Text('Anda yakin?', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.bold, fontSize: 20)),
               const SizedBox(height: 8),
-              Text(
-                'Pastikan data sudah benar!',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 14,
-                  color: AppColors.black.normal.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
+              Text('Pastikan data sudah benar!', style: TextStyle(fontFamily: 'InstrumentSans', fontSize: 14, color: AppColors.black.normal.withOpacity(0.6)), textAlign: TextAlign.center),
             ],
           ),
           actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 OutlinedButton( 
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.red.normal),
-                    foregroundColor: AppColors.red.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'BATAL',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(false); 
-                  },
+                  style: OutlinedButton.styleFrom(side: BorderSide(color: AppColors.red.normal), foregroundColor: AppColors.red.normal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                  child: const Text('BATAL', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700)),
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton( 
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.blue.normal,
-                    foregroundColor: AppColors.white.normal,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'KIRIM',
-                    style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700),
-                    textAlign: TextAlign.center,
-                  ),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop(true); 
-                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.blue.normal, foregroundColor: AppColors.white.normal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                  child: const Text('KIRIM', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
                 ),
               ],
             )
@@ -463,7 +453,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
       },
     );
   }
-  
+
   void _showPhotoSubmitSuccessDialog(BuildContext context) {
     _lottieSuccessController?.dispose(); 
     _lottieSuccessController = AnimationController(vsync: this);
@@ -477,151 +467,72 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
-                width: 120,
-                height: 120,
-                child: Lottie.asset(
-                  'assets/lottie/success.json',
-                  repeat: false,
-                  controller: _lottieSuccessController,
-                  onLoaded: (composition) {
-                    _lottieSuccessController!
-                      ..duration = composition.duration
-                      ..forward().whenComplete(() {
-                        Future.delayed(Duration(milliseconds: 300), () { 
-                          Navigator.of(dialogContext).pop();
-                        });
+                width: 120, height: 120,
+                child: Lottie.asset('assets/lottie/success.json', repeat: false, controller: _lottieSuccessController, onLoaded: (composition) {
+                  _lottieSuccessController!
+                    ..duration = composition.duration
+                    ..forward().whenComplete(() {
+                      Future.delayed(const Duration(milliseconds: 300), () { 
+                        Navigator.of(dialogContext).pop();
                       });
-                  },
-                ),
+                    });
+                }),
               ),
-              Text(
-                'Berhasil!',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
+              const Text('Berhasil!', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.bold, fontSize: 20)),
               const SizedBox(height: 8),
-              Text(
-                'Foto telah berhasil dikirim.',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 14,
-                  color: AppColors.black.normal.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
+              Text('Foto telah berhasil dikirim.', style: TextStyle(fontFamily: 'InstrumentSans', fontSize: 14, color: AppColors.black.normal.withOpacity(0.6)), textAlign: TextAlign.center),
             ],
           ),
-          actions: [],
         );
       },
     );
   }
-  
-  @override
-  void dispose() {
-    _lottieSuccessController?.dispose(); 
-    _lottieSuccessTotalController?.dispose();
-    super.dispose();
-  }
 
   Future<Map<String, String>?> _showWeightInputDialog(BuildContext context) {
-    final String todayDate =
-        DateFormat('EEEE, d MMMM yyyy', 'id').format(DateTime.now());
-    final _mtController = TextEditingController(text: '0');
-    final _mdController = TextEditingController(text: '0');
-    final _residuController = TextEditingController(text: '0');
-    final _b3Controller = TextEditingController(text: '0');
+    final String todayDate = DateFormat('EEEE, d MMMM yyyy', 'id').format(DateTime.now());
+    final mtController = TextEditingController(text: '0');
+    final mdController = TextEditingController(text: '0');
+    final residuController = TextEditingController(text: '0');
+    final b3Controller = TextEditingController(text: '0');
+    
     return showDialog<Map<String, String>?>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
           contentPadding: const EdgeInsets.symmetric(horizontal: 24),
           actionsPadding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
           title: Text(
             'Data Sampah RW 7 : $todayDate',
-            style: const TextStyle(
-              fontFamily: 'InstrumentSans',
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
+            style: const TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w600, fontSize: 16),
           ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Row(
-                  children: [
-                    Expanded(
-                        child: _buildWeightTextField(
-                            'Mudah Terurai (kg)', _mtController)),
-                    const SizedBox(width: 16),
-                    Expanded(
-                        child: _buildWeightTextField(
-                            'Material Daur (kg)', _mdController)),
-                  ],
-                ),
+                Row(children: [Expanded(child: _buildWeightTextField('Mudah Terurai (kg)', mtController)), const SizedBox(width: 16), Expanded(child: _buildWeightTextField('Material Daur (kg)', mdController))]),
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                        child: _buildWeightTextField(
-                            'Residu (kg)', _residuController)),
-                    const SizedBox(width: 16),
-                    Expanded(
-                        child: _buildWeightTextField(
-                            'E-waste/B3 (kg)', _b3Controller)),
-                  ],
-                ),
+                Row(children: [Expanded(child: _buildWeightTextField('Residu (kg)', residuController)), const SizedBox(width: 16), Expanded(child: _buildWeightTextField('E-waste/B3 (kg)', b3Controller))]),
               ],
             ),
           ),
           actions: <Widget>[
             TextButton(
-              style: TextButton.styleFrom(
-                backgroundColor: AppColors.red.normal,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              child: Text(
-                'BATAL',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  color: AppColors.white.normal,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(dialogContext)
-                    .pop(null); 
-              },
+              style: TextButton.styleFrom(backgroundColor: AppColors.red.normal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              child: Text('BATAL', style: TextStyle(fontFamily: 'InstrumentSans', color: AppColors.white.normal, fontWeight: FontWeight.w600)),
+              onPressed: () => Navigator.of(dialogContext).pop(null),
             ),
             TextButton(
-              style: TextButton.styleFrom(
-                backgroundColor: AppColors.green.normal,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              child: Text(
-                'SIMPAN',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  color: AppColors.white.normal,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              style: TextButton.styleFrom(backgroundColor: AppColors.green.normal, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+              child: Text('SIMPAN', style: TextStyle(fontFamily: 'InstrumentSans', color: AppColors.white.normal, fontWeight: FontWeight.w600)),
               onPressed: () {
                 final dataBerat = {
-                  'mudah_terurai': _mtController.text,
-                  'material_daur': _mdController.text,
-                  'residu': _residuController.text,
-                  'b3': _b3Controller.text,
+                  'mudah_terurai': mtController.text,
+                  'material_daur': mdController.text,
+                  'residu': residuController.text,
+                  'b3': b3Controller.text,
                 };
                 Navigator.of(dialogContext).pop(dataBerat);
               },
@@ -632,45 +543,25 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     );
   }
 
-  Widget _buildWeightTextField(
-      String label, TextEditingController controller) {
+  Widget _buildWeightTextField(String label, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'InstrumentSans',
-            fontSize: 12,
-            color: AppColors.black.normal.withOpacity(0.7),
-          ),
-        ),
+        Text(label, style: TextStyle(fontFamily: 'InstrumentSans', fontSize: 12, color: AppColors.black.normal.withOpacity(0.7))),
         const SizedBox(height: 4),
         TextField(
           controller: controller,
           style: const TextStyle(fontFamily: 'InstrumentSans', fontSize: 14),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-          ],
+          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
           decoration: InputDecoration(
             isDense: true,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             filled: true,
             fillColor: AppColors.white.normal,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.black.lightActive),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.black.lightActive),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.blue.normal, width: 1.5),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.black.lightActive)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.black.lightActive)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: AppColors.blue.normal, width: 1.5)),
           ),
         ),
       ],
@@ -685,37 +576,21 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Lottie.asset(
-                'assets/lottie/success.json',
-                repeat: false,
-                width: 150,
-                height: 150,
-                controller: _lottieSuccessTotalController,
-                onLoaded: (composition) {
-                  _lottieSuccessTotalController!
-                    ..duration = composition.duration
-                    ..forward().whenComplete(() {
-                      Future.delayed(composition.duration, () {
-                        Navigator.of(context).pop();
-                      });
+              Lottie.asset('assets/lottie/success.json', repeat: false, width: 150, height: 150, controller: _lottieSuccessTotalController, onLoaded: (composition) {
+                _lottieSuccessTotalController!
+                  ..duration = composition.duration
+                  ..forward().whenComplete(() {
+                    Future.delayed(composition.duration, () {
+                      if(context.mounted) Navigator.of(context).pop();
                     });
-                },
-              ),
+                  });
+              }),
               const SizedBox(height: 16),
-              Text(
-                'Data Berhasil Dikirim!',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                  color: AppColors.blue.normal,
-                ),
-              ),
+              Text('Data Berhasil Dikirim!', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w600, fontSize: 18, color: AppColors.blue.normal)),
             ],
           ),
         );
@@ -723,34 +598,31 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     );
   }
 
+  // ==========================================================================
+  // BUILD METHOD (MAIN UI)
+  // ==========================================================================
   @override
   Widget build(BuildContext context) {
-    final String todayDate =
-        DateFormat('EEEE, d MMMM yyyy', 'id').format(DateTime.now());
-    final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+    final String todayDate = DateFormat('EEEE, d MMMM yyyy', 'id').format(DateTime.now());
+    final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
+    
     return BlocProvider(
-      create: (context) => ChecklistInputCubit()..fetchListRumah(),
+      create: (context) => di.sl<ChecklistInputCubit>()..fetchListRumah(),
       child: Scaffold(
-        key: _scaffoldKey,
-        backgroundColor: AppColors.white.normal,
-        drawer: const ChecklistMenuDrawerWidget(
-            activeRoute: ChecklistPage.routeName),
-        bottomNavigationBar: CustomBottomNavbar(
-          selectedIndex: 2,
-          onItemTapped: (index) {
-            if (index == 0) Navigator.pushReplacementNamed(context, '/home');
-            if (index == 1)
-              Navigator.pushReplacementNamed(context, DataPage.routeName);
-            if (index == 2) {}
-            if (index == 3)
-              Navigator.pushReplacementNamed(context, LaporanPage.routeName);
-            if (index == 4)
-              Navigator.pushReplacementNamed(context, ProfilePage.routeName);
-          },
-        ),
+        key: scaffoldKey,
+        backgroundColor: const Color(0xFFF8F9FD),
+        drawer: const ChecklistMenuDrawerWidget(activeRoute: ChecklistPage.routeName),
+        extendBody: true, 
         body: _ChecklistBody(
-          scaffoldKey: _scaffoldKey,
+          scaffoldKey: scaffoldKey,
           todayDate: todayDate,
+          
+          // Callback Filter (Kirim cubit ke sheet!)
+          onShowFilter: (cubit, listRT, currentRT) {
+            _showFilterSheet(context, cubit, listRT, currentRT);
+          },
+          
+          // Callback Image Picker
           onShowImagePicker: (sheetContext, rumahId, isUploaded) {
             if (isUploaded) {
               _showViewOnlyPreviewDialog(sheetContext, rumahId);
@@ -758,15 +630,9 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
               _showImageSourceActionSheet(sheetContext, rumahId);
             }
           },
-          onShowPhotoSubmitSuccess: () {
-            _showPhotoSubmitSuccessDialog(context);
-          },
-          onShowWeightDialog: () {
-            return _showWeightInputDialog(context);
-          },
-          onShowSuccessAnimation: () {
-            _showSuccessAnimation(context);
-          }
+          onShowPhotoSubmitSuccess: () => _showPhotoSubmitSuccessDialog(context),
+          onShowWeightDialog: () => _showWeightInputDialog(context),
+          onShowSuccessAnimation: () => _showSuccessAnimation(context),
         ),
       ),
     );
@@ -776,7 +642,11 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
 class _ChecklistBody extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final String todayDate;
-  final Function(BuildContext context, String rumahId, bool isUploaded) onShowImagePicker;
+  
+  // FIX: Callback menerima Cubit
+  final Function(ChecklistInputCubit, List<String>, String) onShowFilter; 
+  
+  final Function(BuildContext, String, bool) onShowImagePicker;
   final Function() onShowPhotoSubmitSuccess;
   final Future<Map<String, String>?> Function() onShowWeightDialog;
   final Function() onShowSuccessAnimation;
@@ -784,76 +654,83 @@ class _ChecklistBody extends StatelessWidget {
   const _ChecklistBody({
     required this.scaffoldKey,
     required this.todayDate,
+    required this.onShowFilter,
     required this.onShowImagePicker,
     required this.onShowPhotoSubmitSuccess,
-    required this.onShowWeightDialog, 
-    required this.onShowSuccessAnimation, 
+    required this.onShowWeightDialog,
+    required this.onShowSuccessAnimation,
   });
 
   @override
   Widget build(BuildContext context) {
+    final double bottomPadding = 80 + MediaQuery.of(context).viewPadding.bottom;
+
     return BlocConsumer<ChecklistInputCubit, ChecklistInputState>(
-      listenWhen: (prev, current) => prev.status != current.status,
       listener: (context, state) {
         if (state.status == ChecklistInputStatus.uploadFotoSuccess) {
-          onShowPhotoSubmitSuccess(); 
-        } else if (state.status == ChecklistInputStatus.uploadFotoFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    'Gagal Upload Foto: ${state.errorMessage ?? 'Unknown error'}')),
-          );
+          onShowPhotoSubmitSuccess();
         }
         if (state.status == ChecklistInputStatus.submitTotalSuccess) {
-          onShowSuccessAnimation(); 
-        } else if (state.status == ChecklistInputStatus.submitTotalFailure) {
-           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    'Gagal Kirim Data: ${state.errorMessage ?? 'Unknown error'}')),
-          );
+          onShowSuccessAnimation();
         }
       },
-      buildWhen: (prev, current) => 
-          prev.status != current.status || 
-          prev.filteredListRumah != current.filteredListRumah,
       builder: (context, state) {
+        final bool isLoading = state.status == ChecklistInputStatus.loading;
         final bool isUploading = state.status == ChecklistInputStatus.uploadingFoto;
         final bool isSubmitting = state.status == ChecklistInputStatus.submittingTotal;
+
         return Stack(
           children: [
-            SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildHeaderAndFilters(context, todayDate),
-                  _buildLegend(),
-                  _buildListContent(context, state),
-                  _buildSubmitButton(context), 
-                ],
-              ),
+            CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  // Kirim Cubit instance ke header
+                  child: _buildHeaderAndFilters(context, todayDate, state),
+                ),
+                SliverToBoxAdapter(
+                  child: _buildLegend(),
+                ),
+                if (isLoading)
+                  const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+                else if (state.filteredListRumah.isEmpty)
+                  SliverFillRemaining(child: _buildEmptyState())
+                else
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final data = state.filteredListRumah[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: ChecklistCardWidget(
+                            key: ValueKey(data.id),
+                            dataRumah: data,
+                            onSampahChanged: (key, val) {
+                              context.read<ChecklistInputCubit>().updateSampahChecklist(data.id, key, val);
+                            },
+                            onFotoUploadTapped: (isUp) {
+                              onShowImagePicker(context, data.id, isUp);
+                            },
+                          ),
+                        );
+                      },
+                      childCount: state.filteredListRumah.length,
+                    ),
+                  ),
+                SliverToBoxAdapter(child: SizedBox(height: bottomPadding + 80)),
+              ],
             ),
+            
+            Positioned(
+              left: 20, 
+              right: 20, 
+              bottom: 20, 
+              child: _buildSubmitButton(context, state),
+            ),
+
             if (isUploading || isSubmitting)
               Container(
                 color: Colors.black.withOpacity(0.5),
-                child: Center(
-                  child: Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text(
-                            isUploading ? "Mengupload foto..." : "Mengirim data...",
-                             style: TextStyle(fontFamily: 'InstrumentSans', fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
           ],
         );
@@ -861,72 +738,7 @@ class _ChecklistBody extends StatelessWidget {
     );
   }
 
-  Widget _buildListContent(BuildContext context, ChecklistInputState state) {
-    if (state.status == ChecklistInputStatus.loading && state.listRumah.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(32.0),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    if (state.status == ChecklistInputStatus.failure && state.listRumah.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.all(32.0),
-        child: Center(child: Text('Gagal load data: ${state.errorMessage ?? 'Error'}')),
-      );
-    }
-    if (state.filteredListRumah.isEmpty) {
-       return Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Lottie.asset(
-                'assets/lottie/nodata.json',
-                width: 250,
-                height: 250,
-                repeat: true,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Tidak ada data rumah',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 16,
-                  color: AppColors.black.normal.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: state.filteredListRumah.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemBuilder: (context, index) {
-        final dataRumah = state.filteredListRumah[index];
-        return ChecklistCardWidget(
-          key: ValueKey(dataRumah.id), 
-          dataRumah: dataRumah,
-          onSampahChanged: (String jenisSampah, bool isChecked) {
-            context.read<ChecklistInputCubit>().updateSampahChecklist(
-                  dataRumah.id,
-                  jenisSampah,
-                  isChecked,
-                );
-          },
-          onFotoUploadTapped: (bool isUploaded) {
-            onShowImagePicker(context, dataRumah.id, isUploaded);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildHeaderAndFilters(BuildContext context, String date) {
+  Widget _buildHeaderAndFilters(BuildContext context, String date, ChecklistInputState state) {
     return Container(
       padding: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
@@ -935,11 +747,18 @@ class _ChecklistBody extends StatelessWidget {
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.blue.normal.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          )
+        ],
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -949,36 +768,77 @@ class _ChecklistBody extends StatelessWidget {
                     icon: Icon(LucideIcons.menu, color: AppColors.white.normal),
                     onPressed: () => scaffoldKey.currentState?.openDrawer(),
                   ),
+                  const Spacer(),
+                  Icon(LucideIcons.clipboardEdit, color: AppColors.white.normal, size: 20),
                   const SizedBox(width: 8),
-                  Icon(LucideIcons.clipboardEdit,
-                      color: AppColors.white.normal, size: 22),
-                  const SizedBox(width: 12),
                   Text(
                     'Input Harian',
                     style: TextStyle(
                       fontFamily: 'InstrumentSans',
                       color: AppColors.white.normal,
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const Spacer(),
+                  const SizedBox(width: 48), 
                 ],
               ),
-              const SizedBox(height: 5),
-              Padding(
-                padding: const EdgeInsets.only(left: 12.0),
-                child: Text(
-                  date,
-                  style: TextStyle(
-                    fontFamily: 'InstrumentSans',
+              
+              const SizedBox(height: 16),
+              
+              Text(
+                date,
+                style: TextStyle(
+                  fontFamily: 'InstrumentSans',
+                  color: AppColors.white.normal,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              
+              const SizedBox(height: 20),
+              
+              Text(
+                'Filter RT:',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSans',
+                  color: AppColors.white.normal.withOpacity(0.8),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              // TOMBOL FILTER
+              GestureDetector(
+                onTap: () {
+                  // FIX: Ambil instance Cubit di sini dan kirim ke atas
+                  final cubit = context.read<ChecklistInputCubit>();
+                  onShowFilter(cubit, state.listRT, state.selectedRT);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
                     color: AppColors.white.normal,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        state.selectedRT == 'Semua RT' ? 'Semua RT' : 'RT ${state.selectedRT}',
+                        style: TextStyle(
+                          fontFamily: 'InstrumentSans',
+                          color: AppColors.black.normal,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Icon(LucideIcons.chevronDown, color: AppColors.black.normal, size: 20),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              _buildFilterSection(context), 
             ],
           ),
         ),
@@ -986,25 +846,25 @@ class _ChecklistBody extends StatelessWidget {
     );
   }
 
+  // ... Widget Legend, EmptyState, SubmitButton sama kayak sebelumnya ...
   Widget _buildLegend() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         children: [
           Row(
             children: [
-              _buildLegendItem('MT', 'Mudah Terurai',
-                  abvColor: AppColors.green.normal),
-              _buildLegendItem('R', 'Residu',
-                  abvColor: AppColors.blue.darkActive),
+              _legendItem("MT", "Mudah Terurai", AppColors.green.normal),
+              const SizedBox(width: 16),
+              _legendItem("R", "Residu", AppColors.black.normal),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Row(
             children: [
-              _buildLegendItem('MD', 'Material Daur',
-                  abvColor: AppColors.blue.normal),
-              _buildLegendItem('B3', '', abvColor: AppColors.red.normal),
+              _legendItem("MD", "Material Daur", AppColors.blue.normal),
+              const SizedBox(width: 16),
+              _legendItem("B3", "B3", AppColors.red.normal),
             ],
           ),
         ],
@@ -1012,27 +872,26 @@ class _ChecklistBody extends StatelessWidget {
     );
   }
 
-  Widget _buildLegendItem(String abbreviation, String text, {Color? abvColor}) {
-    abvColor ??= AppColors.black.darker;
+  Widget _legendItem(String code, String label, Color color) {
     return Expanded(
       child: Row(
         children: [
           Text(
-            abbreviation,
+            code,
             style: TextStyle(
               fontFamily: 'InstrumentSans',
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.bold,
+              color: color,
               fontSize: 14,
-              color: abvColor,
             ),
           ),
           const SizedBox(width: 8),
           Text(
-            text,
+            label,
             style: TextStyle(
               fontFamily: 'InstrumentSans',
-              fontSize: 14,
-              color: AppColors.black.normal.withOpacity(0.8),
+              color: AppColors.black.normal.withOpacity(0.7),
+              fontSize: 12,
             ),
           ),
         ],
@@ -1040,189 +899,69 @@ class _ChecklistBody extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4.0, bottom: 4.0),
-          child: Text(
-            'Filter RT:',
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Lottie.asset('assets/lottie/nodata.json', width: 200, height: 200),
+          const SizedBox(height: 16),
+          Text(
+            'Belum ada data rumah',
             style: TextStyle(
-                fontFamily: 'InstrumentSans',
-                color: AppColors.white.normal.withOpacity(0.8),
-                fontSize: 13,
-                fontWeight: FontWeight.w500),
+              fontFamily: 'InstrumentSans',
+              color: Colors.grey[600],
+              fontSize: 16,
+            ),
           ),
-        ),
-        BlocBuilder<ChecklistInputCubit, ChecklistInputState>(
-          buildWhen: (prev, current) => prev.selectedRT != current.selectedRT || prev.listRT != current.listRT,
-          builder: (context, state) {
-            return _buildFilterDropdown(state.selectedRT, state.listRT, () {
-              _showFilterSheet(context, 'Pilih RT', state.listRT, state.selectedRT,
-                  (value) {
-                if (value != null) {
-                  context.read<ChecklistInputCubit>().filterRtChanged(value);
-                }
-              });
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFilterDropdown(
-      String? currentValue, List<String> items, VoidCallback onTap) {
-    return Material(
-      color: AppColors.white.normal,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                currentValue ?? 'Pilih...',
-                style: TextStyle(
-                  fontFamily: 'InstrumentSans',
-                  fontSize: 14,
-                  color: AppColors.black.normal.withOpacity(0.87),
-                ),
-              ),
-              Icon(LucideIcons.chevronDown,
-                  size: 20, color: AppColors.black.normal.withOpacity(0.6)),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
 
-  void _showFilterSheet(
-      BuildContext context,
-      String title,
-      List<String> items,
-      String? currentSelection,
-      ValueChanged<String?> onSelect) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          constraints:
-              BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.5),
-          padding: EdgeInsets.only(
-              top: 20,
-              left: 16,
-              right: 16,
-              bottom: MediaQuery.of(context).viewPadding.bottom + 16),
-          decoration: BoxDecoration(
-            color: AppColors.white.normal,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
+  Widget _buildSubmitButton(BuildContext context, ChecklistInputState state) {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.blue.normal.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontFamily: 'InstrumentSans',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: items.length,
-                  itemBuilder: (context, index) {
-                    final bool isSelected = items[index] == currentSelection;
-                    return ListTile(
-                      title: Text(items[index],
-                          style: TextStyle(
-                            fontFamily: 'InstrumentSans',
-                            color: isSelected
-                                ? AppColors.blue.normal
-                                : AppColors.black.normal,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          )),
-                      trailing: isSelected
-                          ? Icon(LucideIcons.check,
-                              color: AppColors.blue.normal, size: 20)
-                          : null,
-                      onTap: () {
-                        onSelect(items[index]);
-                        Navigator.pop(context);
-                      },
-                      dense: true,
-                    );
-                  },
-                ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: () async {
+          final Map<String, String>? dataBerat = await onShowWeightDialog();
+          if (dataBerat != null && context.mounted) {
+            context.read<ChecklistInputCubit>().submitTotalWeight(dataBerat);
+          }
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.green.normal,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), 
+          ),
+          elevation: 0, 
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(LucideIcons.uploadCloud, size: 20),
+            SizedBox(width: 8),
+            Text(
+              'Simpan Data Harian',
+              style: TextStyle(
+                fontFamily: 'InstrumentSans',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
               ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSubmitButton(BuildContext context) {
-    return BlocBuilder<ChecklistInputCubit, ChecklistInputState>(
-      buildWhen: (prev, current) => prev.status != current.status,
-      builder: (context, state) {
-        final bool isSubmitting = state.status == ChecklistInputStatus.submittingTotal;
-        final bool isUploading = state.status == ChecklistInputStatus.uploadingFoto;
-        final bool isLoading = isSubmitting || isUploading;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-              16, 16, 16, 16 + MediaQuery.of(context).viewPadding.bottom + 70),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: isLoading ? null : () async { 
-                print("Submit Data Total tapped");
-                final Map<String, String>? dataBerat = await onShowWeightDialog();
-                if (dataBerat != null && context.mounted) {
-                  context.read<ChecklistInputCubit>().submitTotalWeight(dataBerat);
-                } else {
-                  print("Input weight cancelled");
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.blue.normal,
-                foregroundColor: AppColors.white.normal,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-              child: isSubmitting 
-                ? const SizedBox(
-                    height: 20, 
-                    width: 20, 
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
-                  )
-                : const Text(
-                    'Submit Data',
-                    style: TextStyle(
-                      fontFamily: 'InstrumentSans',
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

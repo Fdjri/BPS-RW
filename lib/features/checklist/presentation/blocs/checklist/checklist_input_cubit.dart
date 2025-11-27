@@ -12,7 +12,7 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
   final GetInputChecklist getInputChecklist;
 
   ChecklistInputCubit({required this.getInputChecklist})
-      : super(const ChecklistInputState()); 
+      : super(const ChecklistInputState());
 
   Future<void> fetchListRumah() async {
     emit(state.copyWith(status: ChecklistInputStatus.loading));
@@ -27,8 +27,15 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
         ));
       },
       (data) {
-        final uniqueRTs = data.map((RumahChecklist e) => e.rt).toSet().toList();
-        uniqueRTs.sort();
+        // FIX: Filter null values & cast to String safely
+        final uniqueRTs = data
+            .map((e) => e.rt)
+            .where((rt) => rt != null && rt.toString().isNotEmpty) // Filter null/empty
+            .map((rt) => rt.toString()) // Ensure String type
+            .toSet()
+            .toList(); 
+        
+        uniqueRTs.sort(); 
         
         final listRT = ['Semua RT', ...uniqueRTs];
 
@@ -50,7 +57,8 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
     if (rt == 'Semua RT') {
       filteredList = state.listRumah;
     } else {
-      filteredList = state.listRumah.where((rumah) => rumah.rt == rt).toList();
+      // Safe comparison
+      filteredList = state.listRumah.where((rumah) => rumah.rt.toString() == rt).toList();
     }
 
     emit(state.copyWith(
@@ -59,8 +67,6 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
       filteredListRumah: filteredList,
     ));
   }
-
-  // --- FITUR UPDATE LOKAL ---
 
   void updateSampahChecklist(String rumahId, String jenisSampah, bool isChecked) {
     final newList = state.listRumah.map((rumah) {
@@ -116,7 +122,7 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
   void _updateFilteredList(List<RumahChecklist> newList) {
      final newFilteredList = (state.selectedRT == 'Semua RT')
         ? newList
-        : newList.where((rumah) => rumah.rt == state.selectedRT).toList();
+        : newList.where((rumah) => rumah.rt.toString() == state.selectedRT).toList();
 
     emit(state.copyWith(
       listRumah: newList,
