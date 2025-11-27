@@ -940,23 +940,23 @@ class _ChecklistBody extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.green.normal,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12), 
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16), 
+            borderRadius: BorderRadius.circular(12),
           ),
           elevation: 0, 
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.uploadCloud, size: 20),
+            Icon(LucideIcons.uploadCloud, size: 18), 
             SizedBox(width: 8),
             Text(
               'Simpan Data Harian',
               style: TextStyle(
                 fontFamily: 'InstrumentSans',
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: 14, 
               ),
             ),
           ],
