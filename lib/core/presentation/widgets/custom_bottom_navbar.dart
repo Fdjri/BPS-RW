@@ -1,147 +1,99 @@
 import 'package:flutter/material.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:bps_rw/core/presentation/utils/app_colors.dart';
+import '../utils/app_colors.dart';
+
+import '../../../features/home/presentation/pages/main_page.dart'; 
+import '../../../features/data/presentation/pages/data_page.dart'; 
+import '../../../features/checklist/presentation/pages/checklist_page.dart'; 
+import '../../../features/laporan/presentation/pages/laporan_page.dart'; 
+import '../../../features/profile/presentation/pages/profile_page.dart'; 
 
 class CustomBottomNavbar extends StatelessWidget {
-  final int selectedIndex;
-  final Function(int) onItemTapped;
+  final int initialIndex;
 
   const CustomBottomNavbar({
     super.key,
-    required this.selectedIndex,
-    required this.onItemTapped,
+    this.initialIndex = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      elevation: 8,
-      color: AppColors.white.normal,
-      clipBehavior: Clip.none,
-      child: Container(
-        clipBehavior: Clip.none,
-        height: 70 + MediaQuery.of(context).viewPadding.bottom,
-        width: double.infinity,
-        padding: EdgeInsets.fromLTRB(
-          8,
-          8,
-          8,
-          8 + MediaQuery.of(context).viewPadding.bottom,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              context: context,
-              icon: LucideIcons.home,
-              label: 'Home',
-              index: 0,
-            ),
-            _buildNavItem(
-              context: context,
-              icon: LucideIcons.database,
-              label: 'Data',
-              index: 1,
-            ),
-            _buildNavItem(
-              context: context,
-              icon: LucideIcons.checkCircle2,
-              label: 'Checklist',
-              index: 2,
-            ),
-            _buildNavItem(
-              context: context,
-              icon: LucideIcons.clipboardList,
-              label: 'Laporan',
-              index: 3,
-            ),
-            _buildNavItem(
-              context: context,
-              icon: LucideIcons.userCircle2,
-              label: 'Profile',
-              index: 4,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+    final PersistentTabController controller = PersistentTabController(initialIndex: initialIndex);
 
-  Widget _buildNavItem({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required int index,
-  }) {
-    final bool isCentral = index == 2;
-    final bool isSelected = selectedIndex == index;
-    final Color bgColor;
-    if (isCentral) {
-      bgColor = isSelected ? AppColors.blue.dark : AppColors.blue.normal;
-    } else {
-      bgColor = isSelected ? AppColors.blue.dark : Colors.transparent;
-    }
-    final bool isHighlighted = bgColor != Colors.transparent;
-    final Color contentColor = isHighlighted
-        ? AppColors.white.light
-        : AppColors.black.lightActive;
-    final EdgeInsets padding = isHighlighted
-        ? (isCentral
-            ? const EdgeInsets.all(8)
-            : const EdgeInsets.symmetric(horizontal: 16, vertical: 8))
-        : const EdgeInsets.all(8);
-
-    final Widget navItem = AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.fastOutSlowIn,
-      padding: padding,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: contentColor,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'InstrumentSans',
-              color: contentColor,
-              fontSize: 10,
-              fontWeight: FontWeight.w500, 
-              height: 1,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return PersistentTabView(
+      context,
+      controller: controller,
+      screens: _buildScreens(),
+      items: _navBarsItems(),
+      confineToSafeArea: true,
+      backgroundColor: AppColors.white.normal, 
+      handleAndroidBackButtonPress: true,
+      resizeToAvoidBottomInset: true, 
+      stateManagement: true, 
+      
+      decoration: NavBarDecoration(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+        colorBehindNavBar: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
           ),
         ],
       ),
-    );
-
-    final Widget tappableItem = GestureDetector(
-      onTap: () => onItemTapped(index),
-      behavior: HitTestBehavior.translucent,
-      child: navItem,
-    );
-
-    if (isCentral) {
-      return Expanded(
-        child: Transform.translate(
-          offset: const Offset(0, -20),
-          child: tappableItem,
+      
+      animationSettings: const NavBarAnimationSettings(
+        navBarItemAnimation: ItemAnimationSettings( 
+          duration: Duration(milliseconds: 200),
+          curve: Curves.ease,
         ),
-      );
-    }
+        screenTransitionAnimation: ScreenTransitionAnimationSettings( 
+          animateTabTransition: true,
+          curve: Curves.ease,
+          duration: Duration(milliseconds: 200),
+        ),
+      ),
 
-    return Expanded(
-      child: tappableItem,
+      navBarStyle: NavBarStyle.style1, 
+    );
+  }
+
+  List<Widget> _buildScreens() {
+    return [
+      const MainPage(),      
+      const DataPage(),      
+      const ChecklistPage(), 
+      const LaporanPage(),   
+      const ProfilePage(),   
+    ];
+  }
+
+  List<PersistentBottomNavBarItem> _navBarsItems() {
+    return [
+      _buildItem(LucideIcons.home, "Home"),
+      _buildItem(LucideIcons.database, "Data"),
+      _buildItem(LucideIcons.clipboardCheck, "Checklist"), 
+      _buildItem(LucideIcons.fileText, "Laporan"),
+      _buildItem(LucideIcons.user, "Profile"),
+    ];
+  }
+
+  PersistentBottomNavBarItem _buildItem(IconData icon, String title) {
+    return PersistentBottomNavBarItem(
+      icon: Icon(icon),
+      title: title,
+      activeColorPrimary: AppColors.blue.normal, 
+      inactiveColorPrimary: Colors.grey, 
+      textStyle: const TextStyle(
+        fontFamily: 'InstrumentSans',
+        fontWeight: FontWeight.w600,
+        fontSize: 12, 
+      ),
     );
   }
 }
