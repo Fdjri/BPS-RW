@@ -55,6 +55,7 @@ dependencies:
   equatable: ^2.0.7
   flutter_image_compress: ^2.4.0
   dartz: ^0.10.1
+  persistent_bottom_nav_bar: ^6.2.1
 
 dev_dependencies:
   flutter_test:
