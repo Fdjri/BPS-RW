@@ -61,7 +61,6 @@ class MyApp extends StatelessWidget {
           '/': (context) => const LoginPage(),
           
           // 2. Main Tabs (Navbar with initial index)
-          // Gunakan string literal '/home' dll atau routeName static yang konsisten
           '/home': (context) => const CustomBottomNavbar(initialIndex: 0),
           
           // Route '/data' -> Buka Navbar tab ke-2 (Index 1)
@@ -78,11 +77,8 @@ class MyApp extends StatelessWidget {
 
 
           // 3. Sub-Pages (Fullscreen)
-          // Ini halaman detail yang menutupi navbar
           BelumVerifikasiPage.routeName: (context) => const BelumVerifikasiPage(),
           SudahVerifikasiPage.routeName: (context) => const SudahVerifikasiPage(),
-          
-          // Pastikan string routeName di DataPotensiRumahPage sama dengan yang dipanggil di drawer
           DataPotensiRumahPage.routeName: (context) => const DataPotensiRumahPage(),
           DataBeratSampahPage.routeName: (context) => const DataBeratSampahPage(),
         },
