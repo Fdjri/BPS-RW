@@ -97,7 +97,7 @@ class ChecklistMenuDrawerWidget extends StatelessWidget {
                   context,
                   icon: LucideIcons.clock,
                   title: 'Belum Diverifikasi',
-                  subtitle: 'Menunggu verifikasi ketua RW',
+                  subtitle: 'Menunggu verifikasi',
                   isActive: currentRoute == belumVerifikasiRoute,
                   onTap: () => _navigate(context, belumVerifikasiRoute, currentRoute),
                 ),
