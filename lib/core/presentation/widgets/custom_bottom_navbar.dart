@@ -21,8 +21,6 @@ class CustomBottomNavbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final PersistentTabController controller = PersistentTabController(initialIndex: initialIndex);
 
-    final double bottomPadding = MediaQuery.of(context).viewPadding.bottom;
-
     return PersistentTabView(
       context,
       controller: controller,
@@ -33,7 +31,7 @@ class CustomBottomNavbar extends StatelessWidget {
       handleAndroidBackButtonPress: true,
       resizeToAvoidBottomInset: true, 
       stateManagement: true, 
-      padding: EdgeInsets.only(bottom: bottomPadding > 0 ? bottomPadding : 20, top: 10),
+      padding: const EdgeInsets.only(top: 12, bottom: 12),
       margin: const EdgeInsets.all(0),
       decoration: NavBarDecoration(
         borderRadius: const BorderRadius.only(
@@ -90,7 +88,7 @@ class CustomBottomNavbar extends StatelessWidget {
     return PersistentBottomNavBarItem(
       icon: Icon(
         icon,
-        size: 22,
+        size: 20,
         ),
       title: title,
       activeColorPrimary: AppColors.blue.normal, 
