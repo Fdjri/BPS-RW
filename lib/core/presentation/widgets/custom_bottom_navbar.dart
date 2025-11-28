@@ -21,17 +21,20 @@ class CustomBottomNavbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final PersistentTabController controller = PersistentTabController(initialIndex: initialIndex);
 
+    final double bottomPadding = MediaQuery.of(context).viewPadding.bottom;
+
     return PersistentTabView(
       context,
       controller: controller,
       screens: _buildScreens(),
       items: _navBarsItems(),
-      confineToSafeArea: true,
+      confineToSafeArea: true, 
       backgroundColor: AppColors.white.normal, 
       handleAndroidBackButtonPress: true,
       resizeToAvoidBottomInset: true, 
       stateManagement: true, 
-      
+      padding: EdgeInsets.only(bottom: bottomPadding > 0 ? bottomPadding : 20, top: 10),
+      margin: const EdgeInsets.all(0),
       decoration: NavBarDecoration(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
@@ -85,13 +88,16 @@ class CustomBottomNavbar extends StatelessWidget {
 
   PersistentBottomNavBarItem _buildItem(IconData icon, String title) {
     return PersistentBottomNavBarItem(
-      icon: Icon(icon),
+      icon: Icon(
+        icon,
+        size: 22,
+        ),
       title: title,
       activeColorPrimary: AppColors.blue.normal, 
       inactiveColorPrimary: Colors.grey, 
       textStyle: const TextStyle(
         fontFamily: 'InstrumentSans',
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w700,
         fontSize: 12, 
       ),
     );
