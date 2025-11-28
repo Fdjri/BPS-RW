@@ -652,7 +652,10 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
   }
 }
 
-class _ChecklistBody extends StatelessWidget {
+// ---------------------------------------------------------------------------
+// MODIFIED _ChecklistBody (Now Stateful)
+// ---------------------------------------------------------------------------
+class _ChecklistBody extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final String todayDate;
   final Function(ChecklistInputCubit, List<String>, String) onShowFilter; 
@@ -662,6 +665,7 @@ class _ChecklistBody extends StatelessWidget {
   final Function() onShowSuccessAnimation;
 
   const _ChecklistBody({
+    super.key,
     required this.scaffoldKey,
     required this.todayDate,
     required this.onShowFilter,
@@ -672,16 +676,24 @@ class _ChecklistBody extends StatelessWidget {
   });
 
   @override
+  State<_ChecklistBody> createState() => _ChecklistBodyState();
+}
+
+class _ChecklistBodyState extends State<_ChecklistBody> {
+  // VARIABLE BARU: Untuk melacak apakah tombol pernah muncul
+  bool _hasAppeared = false;
+
+  @override
   Widget build(BuildContext context) {
     final double bottomPadding = 80 + MediaQuery.of(context).viewPadding.bottom;
 
     return BlocConsumer<ChecklistInputCubit, ChecklistInputState>(
       listener: (context, state) {
         if (state.status == ChecklistInputStatus.uploadFotoSuccess) {
-          onShowPhotoSubmitSuccess();
+          widget.onShowPhotoSubmitSuccess();
         }
         if (state.status == ChecklistInputStatus.submitTotalSuccess) {
-          onShowSuccessAnimation();
+          widget.onShowSuccessAnimation();
         }
       },
       builder: (context, state) {
@@ -689,12 +701,23 @@ class _ChecklistBody extends StatelessWidget {
         final bool isUploading = state.status == ChecklistInputStatus.uploadingFoto;
         final bool isSubmitting = state.status == ChecklistInputStatus.submittingTotal;
 
+        // Cek apakah saat ini ada data yang di-check
+        final bool hasCurrentInput = state.listRumah.any(
+          (rumah) => rumah.sampah.values.contains(true)
+        );
+
+        // LOGIC UTAMA: Jika ada input, tandai bahwa tombol pernah muncul
+        // Setelah _hasAppeared jadi true, dia akan tetap true selamanya di sesi ini
+        if (hasCurrentInput) {
+          _hasAppeared = true;
+        }
+
         return Stack(
           children: [
             CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
-                  child: _buildHeaderAndFilters(context, todayDate, state),
+                  child: _buildHeaderAndFilters(context, widget.todayDate, state),
                 ),
                 SliverToBoxAdapter(
                   child: _buildLegend(),
@@ -717,7 +740,7 @@ class _ChecklistBody extends StatelessWidget {
                               context.read<ChecklistInputCubit>().updateSampahChecklist(data.id, key, val);
                             },
                             onFotoUploadTapped: (isUp) {
-                              onShowImagePicker(context, data.id, isUp);
+                              widget.onShowImagePicker(context, data.id, isUp);
                             },
                           ),
                         );
@@ -729,10 +752,14 @@ class _ChecklistBody extends StatelessWidget {
               ],
             ),
             
-            Positioned(
+            // UPDATE ANIMATED POSITIONED: Gunakan _hasAppeared sebagai trigger
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOutBack,
               left: 20, 
               right: 20, 
-              bottom: 35, 
+              // Jika _hasAppeared true (pernah muncul), tetap di posisi 15. Jika belum pernah, sembunyi di -100.
+              bottom: _hasAppeared ? 15 : -100, 
               child: _buildSubmitButton(context, state),
             ),
 
@@ -775,7 +802,7 @@ class _ChecklistBody extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: Icon(LucideIcons.menu, color: AppColors.white.normal),
-                    onPressed: () => scaffoldKey.currentState?.openDrawer(),
+                    onPressed: () => widget.scaffoldKey.currentState?.openDrawer(),
                   ),
                   const Spacer(),
                   Icon(LucideIcons.clipboardEdit, color: AppColors.white.normal, size: 20),
@@ -821,7 +848,7 @@ class _ChecklistBody extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   final cubit = context.read<ChecklistInputCubit>();
-                  onShowFilter(cubit, state.listRT, state.selectedRT);
+                  widget.onShowFilter(cubit, state.listRT, state.selectedRT);
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -938,7 +965,7 @@ class _ChecklistBody extends StatelessWidget {
       ),
       child: ElevatedButton(
         onPressed: () async {
-          final Map<String, String>? dataBerat = await onShowWeightDialog();
+          final Map<String, String>? dataBerat = await widget.onShowWeightDialog();
           if (dataBerat != null && context.mounted) {
             context.read<ChecklistInputCubit>().submitTotalWeight(dataBerat);
           }

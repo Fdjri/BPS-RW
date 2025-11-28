@@ -19,15 +19,11 @@ class ChecklistCardWidget extends StatefulWidget {
 }
 
 class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
-  
-  // State lokal buat nandain tombol upload harus muncul selamanya setelah interaksi pertama
   bool _hasUserInteracted = false;
 
   @override
   void initState() {
     super.initState();
-    // Pas init, cek dulu kalau data emang udah ada isinya dari awal (misal load dari API/DB)
-    // Kalau udah ada isinya atau foto udah keupload, langsung anggep udah interaksi.
     if (_isAnySampahChecked || widget.dataRumah.fotoUploaded) {
       _hasUserInteracted = true;
     }
@@ -43,24 +39,16 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
       default: return false;
     }
   }
-
-  // Cek apakah ada sampah yang dicentang
   bool get _isAnySampahChecked {
     return widget.dataRumah.sampah.containsValue(true);
   }
-
-  // Method wrapper buat handle perubahan sampah sekaligus update state interaksi
   void _handleSampahChange(String modelKey, bool newValue) {
-    // Panggil callback ke parent (Cubit)
     widget.onSampahChanged(modelKey, newValue);
-    
-    // Kalau user nge-check (newValue = true), tandain udah interaksi
     if (newValue == true) {
       setState(() {
         _hasUserInteracted = true;
       });
     }
-    // Kalau uncheck, kita GAK ngubah _hasUserInteracted jadi false. Biarin aja true.
   }
 
   @override
@@ -271,7 +259,7 @@ class _ChecklistCardWidgetState extends State<ChecklistCardWidget> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => _handleSampahChange(modelKey, !isChecked), // Pake wrapper function baru
+        onTap: () => _handleSampahChange(modelKey, !isChecked), 
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
