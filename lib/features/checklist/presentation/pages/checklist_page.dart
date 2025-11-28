@@ -8,10 +8,18 @@ import 'package:lottie/lottie.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+
+// Import Dependency Injection
 import '../../../../injection_container.dart' as di;
+
+// Core Imports
 import '../../../../core/presentation/utils/app_colors.dart';
+
+// Widget Imports
 import '../widgets/menu_drawer_widget.dart';
 import '../widgets/card_widget.dart';
+
+// Bloc Import
 import '../blocs/checklist/checklist_input_cubit.dart';
 
 class ChecklistPage extends StatefulWidget {
@@ -46,7 +54,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
   }
 
   // ==========================================================================
-  // 1. LOGIC FILTER SHEET (FIXED: Terima Cubit sebagai Parameter)
+  // 1. LOGIC FILTER SHEET (MODERN STYLE)
   // ==========================================================================
   void _showFilterSheet(BuildContext context, ChecklistInputCubit cubit, List<String> listRT, String currentRT) {
     showModalBottomSheet(
@@ -68,6 +76,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Drag Handle
               Center(
                 child: Container(
                   margin: const EdgeInsets.only(top: 12, bottom: 4),
@@ -79,6 +88,8 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                   ),
                 ),
               ),
+              
+              // Header Sheet
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
                 child: Row(
@@ -102,6 +113,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                   ],
                 ),
               ),
+              
               const Divider(height: 1, color: Color(0xFFEEEEEE)),
 
               // List RT Options
@@ -120,6 +132,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                     return InkWell(
                       onTap: () {
                         Navigator.pop(context);
+                        // Update Cubit State
                         cubit.filterRtChanged(rt);
                       },
                       child: Container(
@@ -617,19 +630,19 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
           scaffoldKey: scaffoldKey,
           todayDate: todayDate,
           
-          // Callback Filter (Kirim cubit ke sheet!)
+          // Callback Filter
           onShowFilter: (cubit, listRT, currentRT) {
             _showFilterSheet(context, cubit, listRT, currentRT);
           },
           
           // Callback Image Picker
           onShowImagePicker: (sheetContext, rumahId, isUploaded) {
-            if (isUploaded) {
-              _showViewOnlyPreviewDialog(sheetContext, rumahId);
-            } else {
-              _showImageSourceActionSheet(sheetContext, rumahId);
-            }
-          },
+             if (isUploaded) {
+                _showViewOnlyPreviewDialog(sheetContext, rumahId);
+             } else {
+                _showImageSourceActionSheet(sheetContext, rumahId);
+             }
+          }, 
           onShowPhotoSubmitSuccess: () => _showPhotoSubmitSuccessDialog(context),
           onShowWeightDialog: () => _showWeightInputDialog(context),
           onShowSuccessAnimation: () => _showSuccessAnimation(context),
@@ -642,10 +655,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
 class _ChecklistBody extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final String todayDate;
-  
-  // FIX: Callback menerima Cubit
   final Function(ChecklistInputCubit, List<String>, String) onShowFilter; 
-  
   final Function(BuildContext, String, bool) onShowImagePicker;
   final Function() onShowPhotoSubmitSuccess;
   final Future<Map<String, String>?> Function() onShowWeightDialog;
@@ -684,7 +694,6 @@ class _ChecklistBody extends StatelessWidget {
             CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
-                  // Kirim Cubit instance ke header
                   child: _buildHeaderAndFilters(context, todayDate, state),
                 ),
                 SliverToBoxAdapter(
@@ -716,14 +725,14 @@ class _ChecklistBody extends StatelessWidget {
                       childCount: state.filteredListRumah.length,
                     ),
                   ),
-                SliverToBoxAdapter(child: SizedBox(height: bottomPadding + 80)),
+                SliverToBoxAdapter(child: SizedBox(height: bottomPadding)),
               ],
             ),
             
             Positioned(
               left: 20, 
               right: 20, 
-              bottom: 20, 
+              bottom: 35, 
               child: _buildSubmitButton(context, state),
             ),
 
@@ -809,10 +818,8 @@ class _ChecklistBody extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               
-              // TOMBOL FILTER
               GestureDetector(
                 onTap: () {
-                  // FIX: Ambil instance Cubit di sini dan kirim ke atas
                   final cubit = context.read<ChecklistInputCubit>();
                   onShowFilter(cubit, state.listRT, state.selectedRT);
                 },
@@ -846,7 +853,6 @@ class _ChecklistBody extends StatelessWidget {
     );
   }
 
-  // ... Widget Legend, EmptyState, SubmitButton sama kayak sebelumnya ...
   Widget _buildLegend() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -942,9 +948,9 @@ class _ChecklistBody extends StatelessWidget {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12), 
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12), 
           ),
-          elevation: 0, 
+          elevation: 5, 
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
