@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async'; // Buat Timer Debounce
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -32,7 +33,7 @@ class ChecklistPage extends StatefulWidget {
 
 class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateMixin {
   final ImagePicker _picker = ImagePicker();
-  
+
   // Animation Controllers
   AnimationController? _lottieSuccessController;
   AnimationController? _lottieSuccessTotalController;
@@ -54,7 +55,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
   }
 
   // ==========================================================================
-  // 1. LOGIC FILTER SHEET (MODERN STYLE)
+  // 1. LOGIC FILTER SHEET
   // ==========================================================================
   void _showFilterSheet(BuildContext context, ChecklistInputCubit cubit, List<String> listRT, String currentRT) {
     showModalBottomSheet(
@@ -76,7 +77,6 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Drag Handle
               Center(
                 child: Container(
                   margin: const EdgeInsets.only(top: 12, bottom: 4),
@@ -88,8 +88,6 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                   ),
                 ),
               ),
-              
-              // Header Sheet
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
                 child: Row(
@@ -113,26 +111,20 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
                   ],
                 ),
               ),
-              
               const Divider(height: 1, color: Color(0xFFEEEEEE)),
-
-              // List RT Options
               Flexible(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   shrinkWrap: true,
                   itemCount: listRT.length,
                   itemBuilder: (context, index) {
-                    // FIX: Handle potential null values safely
                     final String? rawRT = listRT[index];
                     final String rt = rawRT ?? "Unknown"; 
-                    
                     final bool isSelected = rt == currentRT;
                     
                     return InkWell(
                       onTap: () {
                         Navigator.pop(context);
-                        // Update Cubit State
                         cubit.filterRtChanged(rt);
                       },
                       child: Container(
@@ -207,11 +199,9 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
       
       if (mounted) {
         final bool? isSaved = await _showSavePreviewDialog(context, compressedFile, fileSizeInKB);
-        
         if (isSaved == true) { 
           if (!context.mounted) return;
           final bool? isConfirmed = await _showConfirmationDialog(context);
-          
           if (isConfirmed == true && context.mounted) {
             setState(() {
               _uploadedImageFiles[rumahId] = compressedFile; 
@@ -223,7 +213,6 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
         }
       }
     } catch (e) {
-      debugPrint("Error picking image: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error mengambil gambar: $e')),
@@ -274,15 +263,11 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
   }
 
   // ==========================================================================
-  // 3. DIALOGS (Preview, Confirm, Success, Input Weight)
+  // 3. DIALOGS
   // ==========================================================================
-
   Future<void> _showViewOnlyPreviewDialog(BuildContext context, String rumahId) {
     final File? imageFile = _uploadedImageFiles[rumahId];
-    if (imageFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: File foto tidak ditemukan.')));
-      return Future.value();
-    }
+    if (imageFile == null) return Future.value();
 
     return showDialog<void>(
       context: context,
@@ -290,20 +275,15 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text('Lihat Gambar', style: TextStyle(fontFamily: 'InstrumentSans', fontWeight: FontWeight.w600, fontSize: 18)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InkWell(
-                onTap: () {
-                  Navigator.of(dialogContext).pop();
-                  _showFullscreenImageDialog(context, imageFile);
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12.0),
-                  child: Image.file(imageFile, fit: BoxFit.contain, height: 250),
-                ),
-              ),
-            ],
+          content: InkWell(
+            onTap: () {
+              Navigator.of(dialogContext).pop();
+              _showFullscreenImageDialog(context, imageFile);
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12.0),
+              child: Image.file(imageFile, fit: BoxFit.contain, height: 250),
+            ),
           ),
           actionsAlignment: MainAxisAlignment.center,
           actions: [
@@ -363,9 +343,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
           actionsAlignment: MainAxisAlignment.center,
           actions: [
              Wrap(
-              alignment: WrapAlignment.center, 
-              spacing: 8.0, 
-              runSpacing: 8.0,
+              alignment: WrapAlignment.center, spacing: 8.0, runSpacing: 8.0,
               children: [
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
@@ -638,9 +616,9 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
           // Callback Image Picker
           onShowImagePicker: (sheetContext, rumahId, isUploaded) {
              if (isUploaded) {
-                _showViewOnlyPreviewDialog(sheetContext, rumahId);
+               _showViewOnlyPreviewDialog(sheetContext, rumahId);
              } else {
-                _showImageSourceActionSheet(sheetContext, rumahId);
+               _showImageSourceActionSheet(sheetContext, rumahId);
              }
           }, 
           onShowPhotoSubmitSuccess: () => _showPhotoSubmitSuccessDialog(context),
@@ -653,7 +631,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
 }
 
 // ---------------------------------------------------------------------------
-// MODIFIED _ChecklistBody (Now Stateful)
+// MODIFIED _ChecklistBody (UI)
 // ---------------------------------------------------------------------------
 class _ChecklistBody extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
@@ -680,8 +658,17 @@ class _ChecklistBody extends StatefulWidget {
 }
 
 class _ChecklistBodyState extends State<_ChecklistBody> {
-  // VARIABLE BARU: Untuk melacak apakah tombol pernah muncul
+  final TextEditingController _searchController = TextEditingController();
+  // Timer buat debounce
+  Timer? _debounce;
   bool _hasAppeared = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -694,6 +681,8 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
         }
         if (state.status == ChecklistInputStatus.submitTotalSuccess) {
           widget.onShowSuccessAnimation();
+          _searchController.clear();
+          context.read<ChecklistInputCubit>().searchChecklist(''); 
         }
       },
       builder: (context, state) {
@@ -701,16 +690,15 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
         final bool isUploading = state.status == ChecklistInputStatus.uploadingFoto;
         final bool isSubmitting = state.status == ChecklistInputStatus.submittingTotal;
 
-        // Cek apakah saat ini ada data yang di-check
         final bool hasCurrentInput = state.listRumah.any(
           (rumah) => rumah.sampah.values.contains(true)
         );
 
-        // LOGIC UTAMA: Jika ada input, tandai bahwa tombol pernah muncul
-        // Setelah _hasAppeared jadi true, dia akan tetap true selamanya di sesi ini
         if (hasCurrentInput) {
           _hasAppeared = true;
         }
+
+        final displayList = state.filteredListRumah;
 
         return Stack(
           children: [
@@ -724,13 +712,16 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
                 ),
                 if (isLoading)
                   const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-                else if (state.filteredListRumah.isEmpty)
-                  SliverFillRemaining(child: _buildEmptyState())
+                else if (displayList.isEmpty)
+                  SliverFillRemaining(
+                    // Pass query dari state
+                    child: _buildEmptyState(state.searchQuery),
+                  )
                 else
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final data = state.filteredListRumah[index];
+                        final data = displayList[index];
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: ChecklistCardWidget(
@@ -745,20 +736,19 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
                           ),
                         );
                       },
-                      childCount: state.filteredListRumah.length,
+                      childCount: displayList.length,
                     ),
                   ),
                 SliverToBoxAdapter(child: SizedBox(height: bottomPadding)),
               ],
             ),
             
-            // UPDATE ANIMATED POSITIONED: Gunakan _hasAppeared sebagai trigger
+            // Animated Positioned Button
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOutBack,
               left: 20, 
               right: 20, 
-              // Jika _hasAppeared true (pernah muncul), tetap di posisi 15. Jika belum pernah, sembunyi di -100.
               bottom: _hasAppeared ? 15 : -100, 
               child: _buildSubmitButton(context, state),
             ),
@@ -834,6 +824,42 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
               ),
               
               const SizedBox(height: 20),
+
+              // --- FITUR SEARCH ---
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.white.normal,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  // OPTIMASI: Panggil Search di Cubit pake Debounce
+                  onChanged: (value) {
+                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 300), () {
+                      // PANGGIL CUBIT! Logic filter ada di sana
+                      context.read<ChecklistInputCubit>().searchChecklist(value);
+                    });
+                  },
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    color: AppColors.black.normal,
+                    fontSize: 14,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Cari alamat...',
+                    hintStyle: TextStyle(
+                      fontFamily: 'InstrumentSans',
+                      color: Colors.grey,
+                    ),
+                    prefixIcon: Icon(LucideIcons.search, color: Colors.grey, size: 20),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
               
               Text(
                 'Filter RT:',
@@ -932,15 +958,22 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(String query) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Lottie.asset('assets/lottie/nodata.json', width: 200, height: 200),
+          Lottie.asset(
+            'assets/lottie/nodata.json', 
+            width: 200, 
+            height: 200,
+            errorBuilder: (context, error, stackTrace) => const Icon(Icons.search_off, size: 80, color: Colors.grey),
+          ),
           const SizedBox(height: 16),
           Text(
-            'Belum ada data rumah',
+            query.isEmpty 
+                ? 'Belum ada data rumah' 
+                : 'Alamat "$query" tidak ditemukan',
             style: TextStyle(
               fontFamily: 'InstrumentSans',
               color: Colors.grey[600],

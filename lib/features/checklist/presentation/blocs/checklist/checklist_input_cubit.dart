@@ -14,6 +14,7 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
   ChecklistInputCubit({required this.getInputChecklist})
       : super(const ChecklistInputState());
 
+  // 1. Fetch Data Awal
   Future<void> fetchListRumah() async {
     emit(state.copyWith(status: ChecklistInputStatus.loading));
 
@@ -27,66 +28,76 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
         ));
       },
       (data) {
-        // FIX: Filter null values & cast to String safely
+        // Ambil daftar RT unik dan urutkan
         final uniqueRTs = data
             .map((e) => e.rt)
-            .where((rt) => rt != null && rt.toString().isNotEmpty) // Filter null/empty
-            .map((rt) => rt.toString()) // Ensure String type
+            .where((rt) => rt != null && rt.toString().isNotEmpty)
+            .map((rt) => rt.toString())
             .toSet()
-            .toList(); 
+            .toList();
         
-        uniqueRTs.sort(); 
-        
+        uniqueRTs.sort();
         final listRT = ['Semua RT', ...uniqueRTs];
 
+        // Set data awal, filter default (Semua RT & Search Kosong)
         emit(state.copyWith(
           status: ChecklistInputStatus.success,
           listRumah: data,
-          filteredListRumah: data,
+          filteredListRumah: data, 
           listRT: listRT,
-          selectedRT: 'Semua RT',
         ));
       },
     );
   }
 
-  void filterRtChanged(String rt) {
-    if (rt == state.selectedRT) return;
-
-    List<RumahChecklist> filteredList;
-    if (rt == 'Semua RT') {
-      filteredList = state.listRumah;
-    } else {
-      // Safe comparison
-      filteredList = state.listRumah.where((rumah) => rumah.rt.toString() == rt).toList();
-    }
-
-    emit(state.copyWith(
-      status: ChecklistInputStatus.success,
-      selectedRT: rt,
-      filteredListRumah: filteredList,
-    ));
-  }
-
-  void updateSampahChecklist(String rumahId, String jenisSampah, bool isChecked) {
-    final newList = state.listRumah.map((rumah) {
+  // 2. Update Checklist (Checkbox)
+  void updateSampahChecklist(String rumahId, String jenisSampah, bool val) {
+    // Update di Master Data
+    final updatedList = state.listRumah.map((rumah) {
       if (rumah.id == rumahId) {
         final newSampah = Map<String, bool>.from(rumah.sampah);
-        newSampah[jenisSampah] = isChecked;
+        newSampah[jenisSampah] = val;
         return rumah.copyWith(sampah: newSampah);
       }
       return rumah;
     }).toList();
 
-    _updateFilteredList(newList);
+    // Terapkan update ke state dan jalankan filter ulang
+    _applyFiltersAndEmit(
+      masterList: updatedList,
+      rt: state.selectedRT,
+      query: state.searchQuery,
+    );
   }
 
-  Future<void> submitFoto(String rumahId, File foto) async {
+  // 3. Filter Berdasarkan RT
+  void filterRtChanged(String rt) {
+    _applyFiltersAndEmit(
+      masterList: state.listRumah,
+      rt: rt,
+      query: state.searchQuery, 
+    );
+  }
+
+  // 4. Fitur SEARCH
+  void searchChecklist(String query) {
+    _applyFiltersAndEmit(
+      masterList: state.listRumah,
+      rt: state.selectedRT, 
+      query: query,
+    );
+  }
+
+  // 5. Submit Foto
+  Future<void> submitFoto(String rumahId, File imageFile) async {
     emit(state.copyWith(status: ChecklistInputStatus.uploadingFoto));
+    
     try {
+      // Simulasi API Call
       await Future.delayed(const Duration(seconds: 2));
       
-      final newList = state.listRumah.map((rumah) {
+      // Update status foto di Master Data
+      final updatedList = state.listRumah.map((rumah) {
         if (rumah.id == rumahId) {
           return rumah.copyWith(fotoUploaded: true);
         }
@@ -94,7 +105,14 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
       }).toList();
 
       emit(state.copyWith(status: ChecklistInputStatus.uploadFotoSuccess));
-      _updateFilteredList(newList);
+      
+      // Kembalikan ke success dan update list
+      _applyFiltersAndEmit(
+        masterList: updatedList,
+        rt: state.selectedRT,
+        query: state.searchQuery,
+        status: ChecklistInputStatus.success,
+      );
       
     } catch (e) {
       emit(state.copyWith(
@@ -104,11 +122,16 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
     }
   }
 
+  // 6. Submit Total Berat
   Future<void> submitTotalWeight(Map<String, String> dataBerat) async {
     emit(state.copyWith(status: ChecklistInputStatus.submittingTotal));
     try {
+      // Simulasi Submit
       await Future.delayed(const Duration(seconds: 1));
+      
       emit(state.copyWith(status: ChecklistInputStatus.submitTotalSuccess));
+      
+      // Reset status ke success biasa
       await Future.delayed(const Duration(milliseconds: 100));
       emit(state.copyWith(status: ChecklistInputStatus.success));
     } catch (e) {
@@ -119,15 +142,55 @@ class ChecklistInputCubit extends Cubit<ChecklistInputState> {
     }
   }
 
-  void _updateFilteredList(List<RumahChecklist> newList) {
-     final newFilteredList = (state.selectedRT == 'Semua RT')
-        ? newList
-        : newList.where((rumah) => rumah.rt.toString() == state.selectedRT).toList();
+  // --- HELPER FUNCTION: SEARCH ---
+  void _applyFiltersAndEmit({
+    required List<RumahChecklist> masterList,
+    required String rt,
+    required String query,
+    ChecklistInputStatus? status,
+  }) {
+    // 1. Normalisasi Query: Hapus simbol aneh, sisakan huruf & angka
+    final cleanQuery = query.toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), ' ') 
+        .trim(); 
+        
+    // Pecah query jadi list kata 
+    final queryWords = cleanQuery.split(' ').where((word) => word.isNotEmpty).toList();
+
+    // Debugging Print (Cek di Debug Console kalau masih error)
+    // print("🔎 Search: '$query' -> Clean: '$cleanQuery' | Words: $queryWords");
+
+    final filtered = masterList.where((rumah) {
+      // --- Cek Filter RT ---
+      final matchRT = (rt == 'Semua RT') || (rumah.rt == rt);
+      if (!matchRT) return false;
+
+      // --- Cek Search ---
+      if (cleanQuery.isEmpty) return true;
+
+      final alamatRaw = rumah.alamat;
+      
+      // Normalisasi Alamat: "Jl. Makaliwe I - (Triyono)" -> "jl makaliwe i triyono"
+      final cleanAlamat = alamatRaw.toLowerCase()
+          .replaceAll(RegExp(r'[^a-z0-9]'), ' '); 
+
+      // Logika: Semua kata dalam query HARUS ada di dalam alamat
+      bool matchAllWords = true;
+      for (final word in queryWords) {
+        if (!cleanAlamat.contains(word)) {
+          matchAllWords = false;
+          break;
+        }
+      }
+      return matchAllWords;
+    }).toList();
 
     emit(state.copyWith(
-      listRumah: newList,
-      filteredListRumah: newFilteredList,
-      status: ChecklistInputStatus.success, 
+      status: status ?? ChecklistInputStatus.success,
+      listRumah: masterList,
+      filteredListRumah: filtered,
+      selectedRT: rt,
+      searchQuery: query,
     ));
   }
 }
