@@ -1,26 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/presentation/utils/app_colors.dart';
-// Import pages untuk akses routeName static agar konsisten
 import '../pages/data_page.dart';
 import '../pages/potensi_rumah_page.dart';
 import '../pages/data_berat_sampah_page.dart';
 
 class DataMenuDrawer extends StatelessWidget {
-  const DataMenuDrawer({
-    super.key,
-    this.activeRoute,
-  });
+  const DataMenuDrawer({super.key, this.activeRoute});
   final String? activeRoute;
 
-  // Gunakan routeName dari masing-masing Page
   static const String dataRoute = DataPage.routeName;
   static const String potensiRoute = DataPotensiRumahPage.routeName;
   static const String sampahRoute = DataBeratSampahPage.routeName;
 
   @override
   Widget build(BuildContext context) {
-    // Ambil current route dengan aman
     String currentRoute = activeRoute ?? '';
     if (currentRoute.isEmpty) {
       try {
@@ -31,10 +25,9 @@ class DataMenuDrawer extends StatelessWidget {
     return Drawer(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,
-      // Border radius di ujung kanan agar tidak kaku
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topRight: Radius.circular(24), 
+          topRight: Radius.circular(24),
           bottomRight: Radius.circular(24),
         ),
       ),
@@ -54,27 +47,31 @@ class DataMenuDrawer extends StatelessWidget {
                     color: AppColors.blue.light.withOpacity(0.3),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(LucideIcons.database, color: AppColors.blue.normal, size: 24),
+                  child: Icon(
+                    LucideIcons.database,
+                    color: AppColors.blue.normal,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Judul Menu
                 Text(
                   'Menu Data',
                   style: TextStyle(
-                    fontFamily: 'InstrumentSans', 
+                    fontFamily: 'InstrumentSans',
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: AppColors.black.normal,
                   ),
                 ),
                 const SizedBox(height: 4),
-                
+
                 // Subtitle
                 Text(
                   'Kelola database RW',
                   style: TextStyle(
-                    fontFamily: 'InstrumentSans', 
+                    fontFamily: 'InstrumentSans',
                     fontSize: 14,
                     color: Colors.grey[500],
                   ),
@@ -93,12 +90,17 @@ class DataMenuDrawer extends StatelessWidget {
               children: [
                 _buildMenuItem(
                   context,
-                  icon: LucideIcons.database,  
+                  icon: LucideIcons.database,
                   text: 'Data Rumah Lama',
                   subtitle: 'Daftar rumah terdaftar',
                   isSelected: currentRoute == dataRoute,
                   // Navigasi ke Tab Utama (DataPage) -> Pakai pushReplacementNamed
-                  onTap: () => _navigate(context, dataRoute, currentRoute, isTabMainPage: true),
+                  onTap: () => _navigate(
+                    context,
+                    dataRoute,
+                    currentRoute,
+                    isTabMainPage: true,
+                  ),
                 ),
                 const SizedBox(height: 4),
 
@@ -109,7 +111,12 @@ class DataMenuDrawer extends StatelessWidget {
                   subtitle: 'Rumah berpotensi bergabung',
                   isSelected: currentRoute == potensiRoute,
                   // Navigasi ke Sub-Page (Fullscreen) -> Pakai pushNamed
-                  onTap: () => _navigate(context, potensiRoute, currentRoute, isTabMainPage: false),
+                  onTap: () => _navigate(
+                    context,
+                    potensiRoute,
+                    currentRoute,
+                    isTabMainPage: false,
+                  ),
                 ),
                 const SizedBox(height: 4),
 
@@ -120,12 +127,17 @@ class DataMenuDrawer extends StatelessWidget {
                   subtitle: 'Riwayat berat sampah',
                   isSelected: currentRoute == sampahRoute,
                   // Navigasi ke Sub-Page (Fullscreen) -> Pakai pushNamed
-                  onTap: () => _navigate(context, sampahRoute, currentRoute, isTabMainPage: false),
+                  onTap: () => _navigate(
+                    context,
+                    sampahRoute,
+                    currentRoute,
+                    isTabMainPage: false,
+                  ),
                 ),
               ],
             ),
           ),
-          
+
           // --- FOOTER ---
           Padding(
             padding: const EdgeInsets.all(24.0),
@@ -144,9 +156,14 @@ class DataMenuDrawer extends StatelessWidget {
   }
 
   // --- FUNGSI NAVIGASI AMAN (ANTI-FREEZE) ---
-  void _navigate(BuildContext context, String targetRoute, String currentRoute, {required bool isTabMainPage}) {
+  void _navigate(
+    BuildContext context,
+    String targetRoute,
+    String currentRoute, {
+    required bool isTabMainPage,
+  }) {
     // 1. Tutup Drawer DULU
-    Navigator.of(context).pop(); 
+    Navigator.of(context).pop();
 
     // 2. Cek apakah route tujuan SAMA dengan route sekarang?
     if (targetRoute == currentRoute) {
@@ -157,13 +174,20 @@ class DataMenuDrawer extends StatelessWidget {
     Future.delayed(const Duration(milliseconds: 300), () {
       if (context.mounted) {
         if (isTabMainPage) {
-          // Kalau balik ke Menu Utama Tab (Data Page), pake pushReplacementNamed
-          // Ini akan me-reset stack dan kembali ke Navbar
-          Navigator.of(context).pushReplacementNamed(targetRoute);
+          // Kembali ke nav utama tanpa menambah stack
+          Navigator.of(context).popUntil((route) => 
+            route.isFirst || 
+            ['/', '/home', '/data', '/checklist', '/laporan', '/profile'].contains(route.settings.name)
+          );
         } else {
-          // Kalau ke Sub-Page (Potensi/Sampah), pake pushNamed biasa dengan rootNavigator
-          // Biar halaman baru menumpuk di atas (fullscreen) dan punya tombol BACK
-          Navigator.of(context, rootNavigator: true).pushNamed(targetRoute);
+          // Kalau ke Sub-Page (Potensi/Sampah)
+          if (currentRoute != dataRoute && currentRoute != '/home') {
+            // Pindah antar sub-page secara seamless
+            Navigator.of(context).pushReplacementNamed(targetRoute);
+          } else {
+            // Masuk ke sub-page dari nav utama
+            Navigator.of(context, rootNavigator: true).pushNamed(targetRoute);
+          }
         }
       }
     });
@@ -179,12 +203,20 @@ class DataMenuDrawer extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     // Warna Text & Icon (Putih kalau aktif, Hitam/Abu kalau nggak)
-    final Color titleColor = isSelected ? AppColors.white.light : AppColors.black.normal.withOpacity(0.8);
-    final Color subtitleColor = isSelected ? AppColors.white.light.withOpacity(0.8) : Colors.grey[500]!;
-    final Color iconColor = isSelected ? AppColors.white.light : Colors.grey[400]!;
-    
+    final Color titleColor = isSelected
+        ? AppColors.white.light
+        : AppColors.black.normal.withOpacity(0.8);
+    final Color subtitleColor = isSelected
+        ? AppColors.white.light.withOpacity(0.8)
+        : Colors.grey[500]!;
+    final Color iconColor = isSelected
+        ? AppColors.white.light
+        : Colors.grey[400]!;
+
     // Warna Background Block (Biru solid kalau aktif, transparan kalau nggak)
-    final Color bgColor = isSelected ? AppColors.blue.normal : Colors.transparent;
+    final Color bgColor = isSelected
+        ? AppColors.blue.normal
+        : Colors.transparent;
 
     return Material(
       color: Colors.transparent,
@@ -210,7 +242,9 @@ class DataMenuDrawer extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: 'InstrumentSans',
                         fontSize: 15,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w600,
                         color: titleColor,
                       ),
                     ),

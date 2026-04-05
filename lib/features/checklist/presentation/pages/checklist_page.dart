@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:async'; // Buat Timer Debounce
+import 'dart:async'; 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -9,18 +9,10 @@ import 'package:lottie/lottie.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-
-// Import Dependency Injection
 import '../../../../injection_container.dart' as di;
-
-// Core Imports
 import '../../../../core/presentation/utils/app_colors.dart';
-
-// Widget Imports
 import '../widgets/menu_drawer_widget.dart';
 import '../widgets/card_widget.dart';
-
-// Bloc Import
 import '../blocs/checklist/checklist_input_cubit.dart';
 
 class ChecklistPage extends StatefulWidget {
@@ -54,9 +46,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     super.dispose();
   }
 
-  // ==========================================================================
-  // 1. LOGIC FILTER SHEET
-  // ==========================================================================
+  // LOGIC FILTER SHEET
   void _showFilterSheet(BuildContext context, ChecklistInputCubit cubit, List<String> listRT, String currentRT) {
     showModalBottomSheet(
       context: context,
@@ -160,9 +150,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     );
   }
 
-  // ==========================================================================
-  // 2. LOGIC IMAGE PICKER & COMPRESS
-  // ==========================================================================
+  // LOGIC IMAGE PICKER & COMPRESS
   Future<void> _pickAndCompressImage(ImageSource source, BuildContext context, String rumahId, ChecklistInputCubit cubit) async {
     try {
       final XFile? pickedFile = await _picker.pickImage(
@@ -262,9 +250,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     );
   }
 
-  // ==========================================================================
-  // 3. DIALOGS
-  // ==========================================================================
+  // DIALOGS
   Future<void> _showViewOnlyPreviewDialog(BuildContext context, String rumahId) {
     final File? imageFile = _uploadedImageFiles[rumahId];
     if (imageFile == null) return Future.value();
@@ -589,9 +575,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
     );
   }
 
-  // ==========================================================================
-  // BUILD METHOD (MAIN UI)
-  // ==========================================================================
+  // MAIN UI
   @override
   Widget build(BuildContext context) {
     final String todayDate = DateFormat('EEEE, d MMMM yyyy', 'id').format(DateTime.now());
@@ -630,9 +614,7 @@ class _ChecklistPageState extends State<ChecklistPage> with TickerProviderStateM
   }
 }
 
-// ---------------------------------------------------------------------------
-// MODIFIED _ChecklistBody (UI)
-// ---------------------------------------------------------------------------
+// UI
 class _ChecklistBody extends StatefulWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final String todayDate;
@@ -825,7 +807,7 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
               
               const SizedBox(height: 20),
 
-              // --- FITUR SEARCH ---
+              // FITUR SEARCH
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.white.normal,
@@ -833,11 +815,11 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
                 ),
                 child: TextField(
                   controller: _searchController,
-                  // OPTIMASI: Panggil Search di Cubit pake Debounce
+                  textAlignVertical: TextAlignVertical.center, 
+                  
                   onChanged: (value) {
                     if (_debounce?.isActive ?? false) _debounce!.cancel();
                     _debounce = Timer(const Duration(milliseconds: 300), () {
-                      // PANGGIL CUBIT! Logic filter ada di sana
                       context.read<ChecklistInputCubit>().searchChecklist(value);
                     });
                   },
@@ -847,6 +829,8 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
                     fontSize: 14,
                   ),
                   decoration: const InputDecoration(
+                    isDense: true, 
+                    
                     hintText: 'Cari alamat...',
                     hintStyle: TextStyle(
                       fontFamily: 'InstrumentSans',
@@ -854,7 +838,8 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
                     ),
                     prefixIcon: Icon(LucideIcons.search, color: Colors.grey, size: 20),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8), 
                   ),
                 ),
               ),
@@ -877,7 +862,7 @@ class _ChecklistBodyState extends State<_ChecklistBody> {
                   widget.onShowFilter(cubit, state.listRT, state.selectedRT);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.white.normal,
                     borderRadius: BorderRadius.circular(12),

@@ -3,7 +3,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart'; 
 import '../../../../core/presentation/utils/app_colors.dart';
-
+import '../../../../core/services/pdf_checklist_service.dart';
+import 'package:printing/printing.dart';
 class DetailChecklistPage extends StatefulWidget {
   final Map<String, dynamic> checklistData;
   const DetailChecklistPage({
@@ -157,6 +158,47 @@ class _DetailChecklistPageState extends State<DetailChecklistPage> {
               return _buildRumahChecklistCard(detailRumah[index]);
             },
           ),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                try {
+                  final pdfBytes = await PdfChecklistService.generateChecklistPdf(widget.checklistData);
+                  final DateFormat fileDateFmt = DateFormat('yyyy-MM-dd', 'id');
+                  final String dateStr = fileDateFmt.format(tanggal);
+                  await Printing.layoutPdf(
+                    onLayout: (format) async => pdfBytes,
+                    name: 'Checklist_$dateStr.pdf',
+                  );
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal membuat PDF: $e')),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.blue.normal,
+                foregroundColor: AppColors.white.normal,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              icon: const Icon(LucideIcons.printer),
+              label: const Text(
+                'Simpan sebagai PDF',
+                style: TextStyle(
+                  fontFamily: 'InstrumentSans',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );

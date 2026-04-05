@@ -130,8 +130,21 @@ class ChecklistMenuDrawerWidget extends StatelessWidget {
 
     Future.delayed(const Duration(milliseconds: 300), () {
       if (context.mounted) {
-        // FIX: Gunakan pushNamed (bukan pushReplacementNamed) biar bisa di-back
-        Navigator.of(context, rootNavigator: true).pushNamed(targetRoute);
+        if (targetRoute == inputHarianRoute) {
+          // Kembali ke nav utama tanpa menambah stack
+          Navigator.of(context).popUntil((route) => 
+            route.isFirst || 
+            ['/', '/home', '/data', '/checklist', '/laporan', '/profile'].contains(route.settings.name)
+          );
+        } else {
+          if (currentRoute != inputHarianRoute) {
+            // Pindah antar sub-page secara seamless
+            Navigator.of(context).pushReplacementNamed(targetRoute);
+          } else {
+            // Masuk ke sub-page dari nav utama
+            Navigator.of(context, rootNavigator: true).pushNamed(targetRoute);
+          }
+        }
       }
     });
   }

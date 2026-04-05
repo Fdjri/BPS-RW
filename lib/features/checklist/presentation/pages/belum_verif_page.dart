@@ -13,6 +13,7 @@ import 'package:bps_rw/features/profile/presentation/pages/profile_page.dart';
 import 'package:bps_rw/features/data/presentation/pages/data_page.dart';
 import '../blocs/belum_verif/belum_verif_cubit.dart';
 import '../../domain/entities/belum_verif.dart';
+import '../widgets/export_pdf_dialog.dart';
 
 class BelumVerifikasiPage extends StatefulWidget {
   const BelumVerifikasiPage({super.key});
@@ -49,7 +50,22 @@ class _BelumVerifBody extends StatelessWidget {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.white.normal,
-     drawer: const ChecklistMenuDrawerWidget(activeRoute: BelumVerifikasiPage.routeName),
+      drawer: const ChecklistMenuDrawerWidget(activeRoute: BelumVerifikasiPage.routeName),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          final fullData = context.read<UnverifiedChecklistCubit>().state.listData;
+          showDialog(
+            context: context,
+            builder: (dialogContext) => ExportPdfDialog(
+              fullData: fullData,
+              statusTitle: 'Belum Diverifikasi',
+            ),
+          );
+        },
+        backgroundColor: AppColors.blue.normal,
+        foregroundColor: AppColors.white.normal,
+        child: const Icon(LucideIcons.printer),
+      ),
       body: BlocBuilder<UnverifiedChecklistCubit, UnverifiedChecklistState>(
         builder: (context, state) {
           return Stack(

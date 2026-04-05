@@ -6,9 +6,9 @@ class DokumentasiLaporan extends Equatable {
   final DateTime? tanggalPelaksanaan;
   final String? pelaksanaKegiatan;
   final bool isPhotoUploaded;
-  final XFile? pickedImage; 
+  final XFile? pickedImage;
   final String? fotoUrl;
-  final String id; 
+  final String id;
 
   const DokumentasiLaporan({
     this.keterangan,
@@ -16,7 +16,7 @@ class DokumentasiLaporan extends Equatable {
     this.pelaksanaKegiatan,
     this.isPhotoUploaded = false,
     this.pickedImage,
-    this.fotoUrl, 
+    this.fotoUrl,
     required this.id,
   });
 
@@ -35,19 +35,19 @@ class DokumentasiLaporan extends Equatable {
       pelaksanaKegiatan: pelaksanaKegiatan ?? this.pelaksanaKegiatan,
       isPhotoUploaded: isPhotoUploaded ?? this.isPhotoUploaded,
       pickedImage: clearPickedImage ? null : (pickedImage ?? this.pickedImage),
-      fotoUrl: fotoUrl ?? this.fotoUrl, 
-      id: id, 
+      fotoUrl: fotoUrl ?? this.fotoUrl,
+      id: id,
     );
   }
 
   @override
   List<Object?> get props => [
-        keterangan,
-        tanggalPelaksanaan,
-        pelaksanaKegiatan,
-        isPhotoUploaded,
-        pickedImage,
-        fotoUrl, 
-        id,
-      ];
+    keterangan,
+    tanggalPelaksanaan,
+    pelaksanaKegiatan,
+    isPhotoUploaded,
+    pickedImage,
+    fotoUrl,
+    id,
+  ];
 }

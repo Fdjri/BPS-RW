@@ -3,14 +3,14 @@ import 'package:equatable/equatable.dart';
 class Laporan extends Equatable {
   final String id;
   final String bulan;
-  final String tahun; 
+  final String tahun;
   final int jumlahRumah;
   final String status;
 
   const Laporan({
     required this.id,
     required this.bulan,
-    required this.tahun, 
+    required this.tahun,
     required this.jumlahRumah,
     required this.status,
   });
@@ -21,7 +21,7 @@ class Laporan extends Equatable {
     return Laporan(
       id: map['id'] ?? '',
       bulan: map['bulan'] ?? 'Nama Bulan',
-      tahun: map['tahun'] ?? 'Tahun', 
+      tahun: map['tahun'] ?? 'Tahun',
       jumlahRumah: (map['jumlah_rumah'] ?? 0).toInt(),
       status: map['status'] ?? 'N/A',
     );
@@ -31,7 +31,7 @@ class Laporan extends Equatable {
     return {
       'id': id,
       'bulan': bulan,
-      'tahun': tahun, 
+      'tahun': tahun,
       'jumlah_rumah': jumlahRumah,
       'status': status,
     };

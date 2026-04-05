@@ -13,6 +13,7 @@ import 'package:bps_rw/features/laporan/presentation/pages/laporan_page.dart';
 import 'package:bps_rw/features/profile/presentation/pages/profile_page.dart';
 import '../blocs/sudah_verif/sudah_verif_cubit.dart';
 import '../../domain/entities/sudah_verif.dart';
+import '../widgets/export_pdf_dialog.dart';
 
 class SudahVerifikasiPage extends StatefulWidget {
   const SudahVerifikasiPage({super.key});
@@ -49,6 +50,21 @@ class _SudahVerifBody extends StatelessWidget {
       key: _scaffoldKey,
       backgroundColor: AppColors.white.normal,
        drawer: const ChecklistMenuDrawerWidget(activeRoute: SudahVerifikasiPage.routeName),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          final fullData = context.read<VerifiedChecklistCubit>().state.listData;
+          showDialog(
+            context: context,
+            builder: (dialogContext) => ExportPdfDialog(
+              fullData: fullData,
+              statusTitle: 'Sudah Diverifikasi',
+            ),
+          );
+        },
+        backgroundColor: AppColors.blue.normal,
+        foregroundColor: AppColors.white.normal,
+        child: const Icon(LucideIcons.printer),
+      ),
       body: BlocBuilder<VerifiedChecklistCubit, VerifiedChecklistState>(
         builder: (context, state) {
           return Stack(

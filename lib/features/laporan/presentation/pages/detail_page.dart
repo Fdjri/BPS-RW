@@ -8,13 +8,12 @@ import '../../../../core/presentation/utils/app_colors.dart';
 import '../blocs/detail/detail_laporan_cubit.dart';
 import '../../domain/entities/laporan_entities.dart';
 import '../../domain/entities/dokumentasi_laporan.dart';
+import 'package:printing/printing.dart';
+import '../../../../core/services/pdf_dokumentasi_service.dart';
 
 class DetailLaporanPage extends StatefulWidget {
   final String laporanId;
-  const DetailLaporanPage({
-    super.key,
-    required this.laporanId,
-  });
+  const DetailLaporanPage({super.key, required this.laporanId});
 
   @override
   State<DetailLaporanPage> createState() => _DetailLaporanPageState();
@@ -86,7 +85,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
     );
   }
 
-  Widget _buildBody(BuildContext context, Laporan? laporan, List<DokumentasiLaporan> listDokumentasi) {
+  Widget _buildBody(
+    BuildContext context,
+    Laporan? laporan,
+    List<DokumentasiLaporan> listDokumentasi,
+  ) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -119,22 +122,62 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
               );
             }).toList(),
             const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: laporan == null 
+                  ? null 
+                  : () async {
+                      try {
+                        final pdfBytes = await PdfDokumentasiService.generateLaporanDokumentasi(
+                          laporan: laporan,
+                          listKegiatan: listDokumentasi,
+                        );
+                        await Printing.layoutPdf(
+                          onLayout: (format) async => pdfBytes,
+                          name: 'Laporan_${laporan.bulan}_${laporan.tahun}.pdf',
+                        );
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal membuat PDF: $e')),
+                          );
+                        }
+                      }
+                    },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.blue.normal,
+                  foregroundColor: AppColors.white.normal,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                icon: const Icon(LucideIcons.printer),
+                label: const Text(
+                  'Simpan sebagai PDF',
+                  style: TextStyle(
+                    fontFamily: 'InstrumentSans',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildSectionTitle(String title, Color color) {
     return Row(
       children: [
         Container(
           width: 8,
           height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
         Text(
@@ -171,9 +214,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
           color: AppColors.black.lightActive,
         ),
         filled: true,
-        fillColor: AppColors.black.light.withOpacity(0.5), 
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        fillColor: AppColors.black.light.withOpacity(0.5),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: BorderSide(color: AppColors.black.light, width: 1.0),
@@ -210,7 +255,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.black.light.withOpacity(0.5), 
+            color: AppColors.black.light.withOpacity(0.5),
             borderRadius: BorderRadius.circular(15),
             border: Border.all(color: AppColors.black.light, width: 1),
           ),
@@ -229,8 +274,11 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Icon(LucideIcons.chevronDown,
-                  color: AppColors.black.lightActive, size: 20),
+              Icon(
+                LucideIcons.chevronDown,
+                color: AppColors.black.lightActive,
+                size: 20,
+              ),
             ],
           ),
         ),
@@ -246,7 +294,9 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle(
-            'Dokumentasi Kegiatan $number', AppColors.black.normal),
+          'Dokumentasi Kegiatan $number',
+          AppColors.black.normal,
+        ),
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(16),
@@ -297,7 +347,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
+                                      loadingProgress.expectedTotalBytes!
                                 : null,
                           ),
                         ),
@@ -310,7 +360,7 @@ class _DetailLaporanPageState extends State<DetailLaporanPage> {
                   height: 150,
                   decoration: BoxDecoration(
                     color: AppColors.black.light,
-                    borderRadius: BorderRadius.circular(10)
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Lottie.asset(
